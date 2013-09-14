@@ -42,4 +42,7 @@
             url = git://github.com/msanders/snipmate.vim.git
 [submodule ".vim/bundle/vim-jst"]
         path = .vim/bundle/vim-jst
-            url = git@github.com:briancollins/vim-jst.git
+    url = git@github.com:briancollins/vim-jst.git
+[submodule ".vim/bundle/Vim-Tomorrow-Theme"]
+    path = .vim/bundle/Vim-Tomorrow-Theme
+    url = git://github.com/ChrisKempson/Vim-Tomorrow-Theme.git
