@@ -1,0 +1,7 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =5
+let g:netrw_dirhist_1='/Users/ilivingstone/goinstant/website/views/apps'
+let g:netrw_dirhist_2='/Users/ilivingstone/goinstant/website/views'
+let g:netrw_dirhist_3='/Users/ilivingstone/goinstant/platform/test/integration/key'
+let g:netrw_dirhist_4='/Users/ilivingstone/goinstant/hacks/lorry/js'
+let g:netrw_dirhist_5='/Users/ilivingstone/goinstant/test-redis'
