@@ -1,48 +1,51 @@
 [submodule ".vim/vim-pathogen"]
-        path = .vim/vim-pathogen
-            url = git://github.com/tpope/vim-pathogen.git
+    path = .vim/vim-pathogen
+    url = git://github.com/tpope/vim-pathogen.git
 [submodule ".vim/bundle/vim-fugitive"]
-        path = .vim/bundle/vim-fugitive
-            url = git://github.com/tpope/vim-fugitive.git
+    path = .vim/bundle/vim-fugitive
+    url = git://github.com/tpope/vim-fugitive.git
 [submodule ".vim/bundle/vim-git"]
-        path = .vim/bundle/vim-git
-            url = git://github.com/tpope/vim-git.git
+    path = .vim/bundle/vim-git
+    url = git://github.com/tpope/vim-git.git
 [submodule ".vim/bundle/vim-surround"]
-        path = .vim/bundle/vim-surround
-            url = git://github.com/tpope/vim-surround.git
+    path = .vim/bundle/vim-surround
+    url = git://github.com/tpope/vim-surround.git
 [submodule ".vim/bundle/coffee-script"]
-        path = .vim/bundle/coffee-script
-            url = git://github.com/kchmck/vim-coffee-script.git
+    path = .vim/bundle/coffee-script
+    url = git://github.com/kchmck/vim-coffee-script.git
 [submodule ".vim/bundle/vim-commentary"]
-        path = .vim/bundle/vim-commentary
-            url = git://github.com/tpope/vim-commentary.git
+    path = .vim/bundle/vim-commentary
+    url = git://github.com/tpope/vim-commentary.git
 [submodule ".vim/bundle/stash-vim-javascript"]
-        path = .vim/bundle/stash-vim-javascript
-            url = git@github.com:stash/vim-javascript.git
+    path = .vim/bundle/stash-vim-javascript
+    url = git@github.com:stash/vim-javascript.git
 [submodule ".vim/bundle/vim-ruby"]
-        path = .vim/bundle/vim-ruby
-            url = git://github.com/vim-ruby/vim-ruby.git
+    path = .vim/bundle/vim-ruby
+    url = git://github.com/vim-ruby/vim-ruby.git
 [submodule ".vim/bundle/vim-matchit"]
-        path = .vim/bundle/vim-matchit
-            url = git://github.com/edsono/vim-matchit.git
+    path = .vim/bundle/vim-matchit
+    url = git://github.com/edsono/vim-matchit.git
 [submodule ".vim/bundle/syntastic"]
-        path = .vim/bundle/syntastic
-            url = git://github.com/scrooloose/syntastic.git
+    path = .vim/bundle/syntastic
+    url = git://github.com/scrooloose/syntastic.git
 [submodule ".vim/bundle/vim-plugin-minibufexpl"]
-        path = .vim/bundle/vim-plugin-minibufexpl
-            url = git://github.com/techlivezheng/vim-plugin-minibufexpl.git
+    path = .vim/bundle/vim-plugin-minibufexpl
+    url = git://github.com/techlivezheng/vim-plugin-minibufexpl.git
 [submodule ".vim/bundle/delimitMate"]
-        path = .vim/bundle/delimitMate
-            url = git://github.com/Raimondi/delimitMate.git
+    path = .vim/bundle/delimitMate
+    url = git://github.com/Raimondi/delimitMate.git
 [submodule ".vim/bundle/vim-markdown"]
-        path = .vim/bundle/vim-markdown
-            url = git://github.com/tpope/vim-markdown.git
+    path = .vim/bundle/vim-markdown
+    url = git://github.com/tpope/vim-markdown.git
 [submodule ".vim/bundle/snipmate"]
-        path = .vim/bundle/snipmate
-            url = git://github.com/msanders/snipmate.vim.git
+    path = .vim/bundle/snipmate
+    url = git://github.com/msanders/snipmate.vim.git
 [submodule ".vim/bundle/vim-jst"]
-        path = .vim/bundle/vim-jst
+    path = .vim/bundle/vim-jst
     url = git@github.com:briancollins/vim-jst.git
 [submodule ".vim/bundle/Vim-Tomorrow-Theme"]
     path = .vim/bundle/Vim-Tomorrow-Theme
     url = git://github.com/ChrisKempson/Vim-Tomorrow-Theme.git
+[submodule ".vim/bundle/supertab"]
+    path = .vim/bundle/supertab
+    url = git://github.com/ervandew/supertab.git
