@@ -43,9 +43,6 @@
 [submodule ".vim/bundle/vim-jst"]
     path = .vim/bundle/vim-jst
     url = git@github.com:briancollins/vim-jst.git
-[submodule ".vim/bundle/Vim-Tomorrow-Theme"]
-    path = .vim/bundle/Vim-Tomorrow-Theme
-    url = git://github.com/ChrisKempson/Vim-Tomorrow-Theme.git
 [submodule ".vim/bundle/supertab"]
     path = .vim/bundle/supertab
     url = git://github.com/ervandew/supertab.git
