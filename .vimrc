@@ -2,6 +2,7 @@ set nocompatible
 call pathogen#infect()
 syntax on
 syntax sync fromstart
+set re=0 " Fix laggy typescript in vim
 
 filetype plugin indent on
 
@@ -70,3 +71,7 @@ au BufRead,BufNewFile *.json set filetype=json
 if exists('+colorcolumn')
   set colorcolumn=80
 endif
+
+autocmd FileType javascript setlocal ts=2 sts=2 sw=2
+autocmd FileType typescript setlocal ts=2 sts=2 sw=2
+autocmd FileType yaml setlocal ts=2 sts=2 sw=2

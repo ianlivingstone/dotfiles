@@ -1,12 +1,16 @@
 [user]
   name = Ian Livingstone
-  email = ianl@cs.dal.ca
+  email = ianrlivingstone@gmail.com
+  signingkey = C66F26BB37EAD537
 [github]
   user = ianlivingstone
 [color]
-  auto = 1
-  ui = auto
-  sh = auto
+  diff = auto
+  status = auto
+  branch = auto
+  interactive = auto
+  ui = true
+  pager = true
 [alias]
   co = checkout
   ci = commit
@@ -17,3 +21,7 @@
   pretty = oneline
 [merge]
   ff = false
+[init]
+	defaultBranch = main
+[commit]
+	gpgsign = true
