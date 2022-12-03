@@ -1,8 +1,7 @@
 [user]
   name = Ian Livingstone
   email = ianrlivingstone@gmail.com
-  signingkey = C66F26BB37EAD537
-[github]
+  signingKey = 71B7ED6ECFE2FB40DD4BC5B602527F38FDE28DC0[github]
   user = ianlivingstone
 [color]
   diff = auto
