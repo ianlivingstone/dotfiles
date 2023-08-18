@@ -1,0 +1,83 @@
+# Starship configuration focused on language versions
+# System info is handled by shell startup message
+
+# Global timeout setting
+command_timeout = 1000
+
+format = """
+$directory\
+$git_branch\
+$git_status\
+$nodejs\
+$golang\
+$python\
+$rust\
+$java\
+$docker_context\
+$kubernetes\
+$aws\
+$line_break\
+$character"""
+
+[directory]
+style = "blue bold"
+truncation_length = 3
+truncate_to_repo = true
+
+[git_branch]
+symbol = "🌱 "
+style = "bright-green bold"
+
+[git_status]
+style = "red bold"
+format = '([\[$all_status$ahead_behind\]]($style))'
+conflicted = "✘"
+ahead = "⇡"
+behind = "⇣"
+diverged = "⇕"
+up_to_date = "✓"
+untracked = ""
+stashed = ""
+modified = "±"
+staged = ""
+renamed = ""
+deleted = ""
+
+[nodejs]
+symbol = "⬢ "
+style = "green bold"
+detect_extensions = ["js", "mjs", "cjs", "ts", "tsx"]
+detect_files = ["package.json", ".node-version", ".nvmrc"]
+detect_folders = ["node_modules"]
+
+[golang]
+symbol = "🐹 "
+style = "cyan bold"
+
+[python]
+symbol = "🐍 "
+style = "yellow bold"
+
+[rust]
+symbol = "🦀 "
+style = "red bold"
+
+[java]
+symbol = "☕ "
+style = "red bold"
+
+[docker_context]
+symbol = "🐳 "
+style = "blue bold"
+
+[kubernetes]
+symbol = "⎈ "
+style = "cyan bold"
+
+[aws]
+symbol = "☁️ "
+style = "yellow bold"
+
+[character]
+success_symbol = "[❯](purple bold)"
+error_symbol = "[❯](red bold)"

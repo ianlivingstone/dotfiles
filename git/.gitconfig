@@ -1,0 +1,67 @@
+[user]
+    name = Ian Livingstone
+    email = ianrlivingstone@gmail.com
+    signingkey = FD158AB88FB56B899791DCD890E22B3922A06FA8
+
+[color]
+    diff = auto
+    status = auto
+    branch = auto
+    interactive = auto
+    ui = true
+    pager = true
+
+[alias]
+    co = checkout
+    ci = commit
+    st = status
+    br = branch
+    lm = ls-files --exclude-standard -m
+    ls = ls-files --exclude-standard
+    lg = log --oneline --graph --all --decorate
+
+[format]
+    pretty = oneline
+
+[merge]
+    ff = false
+
+[init]
+    defaultBranch = main
+
+[commit]
+    gpgsign = true
+
+[tag]
+    gpgSign = true
+
+[push]
+    default = simple
+    followTags = true
+
+[pull]
+    rebase = true
+
+[core]
+    editor = nvim
+    autocrlf = input
+
+# URL overwrites for GitHub
+[url "git@github.com:"]
+    insteadOf = "gh:"
+    pushInsteadOf = "github:"
+    pushInsteadOf = "git://github.com/"
+
+[url "git://github.com/"]
+    insteadOf = "github:"
+
+[url "git@gist.github.com:"]
+    insteadOf = "gst:"
+    pushInsteadOf = "gist:"
+    pushInsteadOf = "git://gist.github.com/"
+
+[url "git://gist.github.com/"]
+    insteadOf = "gist:"
+
+[url "ssh://git@github.com/"]
+    insteadOf = "https://github.com/"
