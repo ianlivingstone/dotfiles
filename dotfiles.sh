@@ -62,6 +62,14 @@ check_dependencies() {
         missing_deps+=("zsh")
     fi
     
+    if ! command -v luarocks &> /dev/null; then
+        missing_deps+=("luarocks")
+    fi
+    
+    if ! command -v rg &> /dev/null; then
+        missing_deps+=("rg")
+    fi
+    
     # Check for optional but recommended tools
     local optional_missing=()
     if ! command -v nvim &> /dev/null; then
@@ -74,6 +82,10 @@ check_dependencies() {
     
     if ! command -v brew &> /dev/null; then
         optional_missing+=("brew")
+    fi
+    
+    if ! command -v node &> /dev/null; then
+        optional_missing+=("node")
     fi
     
     # Report missing required dependencies
@@ -92,6 +104,12 @@ check_dependencies() {
                     ;;
                 "zsh")
                     echo -e "  ${RED}•${NC} Zsh: brew install zsh"
+                    ;;
+                "luarocks")
+                    echo -e "  ${RED}•${NC} Luarocks: brew install luarocks"
+                    ;;
+                "rg")
+                    echo -e "  ${RED}•${NC} Ripgrep: brew install ripgrep"
                     ;;
             esac
         done
@@ -113,6 +131,9 @@ check_dependencies() {
                     ;;
                 "brew")
                     echo -e "  ${YELLOW}•${NC} Homebrew: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+                    ;;
+                "node")
+                    echo -e "  ${YELLOW}•${NC} Node.js: brew install node"
                     ;;
             esac
         done

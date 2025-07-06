@@ -6,8 +6,8 @@ My personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/)
 
 - **Shell**: Zsh configuration with Starship prompt and startup status message
 - **Git**: Git configuration and aliases
-- **Neovim**: Modern Vim configuration
-- **Tmux**: Terminal multiplexer setup
+- **Neovim**: Modern Neovim configuration with LSP, autocompletion, and file navigation
+- **Tmux**: Terminal multiplexer setup with focus events
 - **Starship**: Custom prompt with language detection and clean git status
 - **Status Message**: One-line system info displayed on shell startup
 - **Misc**: Additional tools and color schemes
@@ -20,6 +20,11 @@ My personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/)
 - **Git** for version control
 - **Zsh** as the shell
 - **Starship** prompt (installed automatically)
+- **Luarocks** for Neovim plugin management (required for some nvim plugins)
+- **Ripgrep** for fast text search in Neovim/Telescope
+- **Neovim** for text editing (optional but recommended)
+- **Tmux** for terminal multiplexing (optional but recommended)
+- **Node.js** for some LSP servers and development tools (optional but recommended)
 
 ## Installation
 
@@ -35,8 +40,11 @@ My personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/)
    # Install Homebrew if not already installed
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    
-   # Install GNU Stow and Starship
-   brew install stow starship
+   # Install required dependencies
+   brew install stow starship luarocks ripgrep
+   
+   # Install optional but recommended tools
+   brew install neovim tmux node
    ```
 
 3. Run the installation script:
@@ -93,7 +101,7 @@ dotfiles/
 ./dotfiles.sh help       # Show all commands
 ```
 
-**Dependencies**: GNU Stow, Starship, Git, Zsh (auto-checked on install)
+**Dependencies**: GNU Stow, Starship, Git, Zsh, Luarocks, Ripgrep (auto-checked on install)
 
 ## Customization
 
@@ -112,6 +120,23 @@ Every new shell displays a one-line status with:
 - **Git Integration**: Clean status indicators (✓ clean, ± dirty, ⇡ ahead)
 - **Context Aware**: Shows Docker, Kubernetes, AWS context when relevant
 - **Fast & Lightweight**: Only loads modules when needed
+
+### Neovim Features
+- **LSP Integration**: Full language server support for TypeScript, Go, and more
+- **Smart Autocompletion**: Context-aware suggestions with snippets
+- **File Navigation**: Fuzzy finding with Telescope (files, text search, buffers)
+- **Auto-formatting**: Automatic code formatting and import organization on save
+- **Syntax Highlighting**: Advanced syntax highlighting with Treesitter
+- **Plugin Management**: Modern plugin management with lazy loading
+
+### Key Bindings
+- **Leader key**: `<Space>`
+- **Save**: `<leader>w`
+- **Quit**: `<leader>q`
+- **File finder**: `<leader>ff` (Telescope)
+- **Text search**: `<leader>fg` (Telescope live grep)
+- **Buffer switcher**: `<leader>fb` (Telescope buffers)
+- **Go organize imports**: `<leader>gi` (Go files only)
 
 ## Dependencies Included
 

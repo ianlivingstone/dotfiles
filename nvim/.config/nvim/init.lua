@@ -28,6 +28,7 @@ vim.opt.termguicolors = true
 vim.opt.scrolloff = 8
 vim.opt.signcolumn = "yes"
 vim.opt.updatetime = 50
+vim.opt.swapfile = false
 
 -- Leader key
 vim.g.mapleader = " "
@@ -165,12 +166,6 @@ require("lazy").setup({
       -- ESLint
       lspconfig.eslint.setup({
         capabilities = capabilities,
-        settings = {
-          codeActionOnSave = {
-            enable = true,
-            mode = "all",
-          },
-        },
       })
 
       -- Go
@@ -262,9 +257,10 @@ require("lazy").setup({
           -- Go-specific keymaps
           if vim.bo.filetype == "go" then
             vim.keymap.set("n", "<leader>gi", function()
-              local params = vim.lsp.util.make_range_params()
-              params.context = { only = { "source.organizeImports" } }
-              vim.lsp.buf.code_action(params)
+              vim.lsp.buf.code_action({
+                context = { only = { "source.organizeImports" } },
+                apply = true,
+              })
             end, opts)
           end
         end,
@@ -280,10 +276,10 @@ require("lazy").setup({
             return
           end
 
-          -- Organize imports
-          vim.lsp.buf.code_action({
-            context = { only = { "source.organizeImports" } },
-            apply = true,
+          -- Execute TypeScript organize imports command directly
+          vim.lsp.buf.execute_command({
+            command = "_typescript.organizeImports",
+            arguments = {vim.uri_from_bufnr(args.buf)}
           })
           
           -- Format the buffer
@@ -396,6 +392,12 @@ require("lazy").setup({
     config = function()
       require("Comment").setup()
     end,
+  },
+}, {
+  rocks = {
+    enabled = true,
+    root = vim.fn.stdpath("data") .. "/lazy-rocks",
+    server = "https://nvim-neorocks.github.io/rocks-binaries/",
   },
 })
 
