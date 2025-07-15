@@ -65,7 +65,7 @@ require("lazy").setup({
       require("mason-lspconfig").setup({
         ensure_installed = {
           "ts_ls",
-          "eslint", 
+          "biome",
           "lua_ls",
           -- Don't auto-install gopls since you have it via gvm
         },
@@ -163,9 +163,16 @@ require("lazy").setup({
         },
       })
 
-      -- ESLint
-      lspconfig.eslint.setup({
+      -- Biome
+      lspconfig.biome.setup({
         capabilities = capabilities,
+        root_dir = lspconfig.util.root_pattern("biome.json", "biome.jsonc", ".git"),
+        single_file_support = false,
+        on_attach = function(client, bufnr)
+          -- Enable formatting capability
+          client.server_capabilities.documentFormattingProvider = true
+          client.server_capabilities.documentRangeFormattingProvider = true
+        end,
       })
 
       -- Go
@@ -270,9 +277,17 @@ require("lazy").setup({
       vim.api.nvim_create_autocmd("BufWritePre", {
         pattern = { "*.ts", "*.tsx", "*.js", "*.jsx" },
         callback = function(args)
-          -- Check if TypeScript LSP is attached
-          local clients = vim.lsp.get_clients({ bufnr = args.buf, name = "ts_ls" })
-          if #clients == 0 then
+          -- Check if Biome LSP is attached first (preferred)
+          local biome_clients = vim.lsp.get_clients({ bufnr = args.buf, name = "biome" })
+          if #biome_clients > 0 then
+            -- Use Biome for formatting and organizing imports
+            vim.lsp.buf.format({ bufnr = args.buf, async = false, timeout_ms = 3000, name = "biome" })
+            return
+          end
+
+          -- Fallback to TypeScript LSP if Biome is not available
+          local ts_clients = vim.lsp.get_clients({ bufnr = args.buf, name = "ts_ls" })
+          if #ts_clients == 0 then
             return
           end
 
@@ -282,8 +297,24 @@ require("lazy").setup({
             arguments = {vim.uri_from_bufnr(args.buf)}
           })
           
-          -- Format the buffer
-          vim.lsp.buf.format({ bufnr = args.buf, async = false, timeout_ms = 3000 })
+          -- Format the buffer with TypeScript LSP
+          vim.lsp.buf.format({ bufnr = args.buf, async = false, timeout_ms = 3000, name = "ts_ls" })
+        end,
+      })
+
+      -- Show diagnostics in location list after save
+      vim.api.nvim_create_autocmd("BufWritePost", {
+        pattern = { "*.ts", "*.tsx", "*.js", "*.jsx" },
+        callback = function(args)
+          -- Check if LSP clients are attached before trying to get diagnostics
+          local clients = vim.lsp.get_clients({ bufnr = args.buf })
+          if #clients > 0 then
+            -- Only show location list if there are diagnostics
+            local diagnostics = vim.diagnostic.get(args.buf)
+            if #diagnostics > 0 then
+              vim.diagnostic.setloclist()
+            end
+          end
         end,
       })
 
