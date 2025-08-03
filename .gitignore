@@ -1,0 +1,23 @@
+# Machine-specific state files that should never be committed
+
+# Neovim backup files from migration
+nvim/.config/nvim/init.lua.backup
+nvim/.config/nvim/*.backup
+
+# Any machine-specific configuration backups
+*.backup
+*.local
+*.machine
+
+# Claude settings (local development)
+.claude/
+
+# Common editor temporary files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Any accidentally created machine configs in wrong location
+**/machine.config
+**/machines/
