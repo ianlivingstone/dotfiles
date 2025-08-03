@@ -3,8 +3,12 @@
 # Note: SHELL_DIR is set by .zshrc before sourcing this file
 # It contains the path to the shell modules directory
 
-# Setup Rust/Cargo
-source "$HOME/.cargo/env"
+# Setup Rust/Cargo (using dedicated rust module)
+if [[ -f "$SHELL_DIR/rust.sh" ]]; then
+    source "$SHELL_DIR/rust.sh"
+else
+    echo "⚠️  Rust module not found at: $SHELL_DIR/rust.sh"
+fi
 
 # Setup GVM/Go (using dedicated gvm module)
 if [[ -f "$SHELL_DIR/gvm.sh" ]]; then
