@@ -528,7 +528,7 @@ show_status() {
 update_environment() {
     echo -e "${GREEN}🔄 Updating Development Environment...${NC}"
     
-    # Load NVM configuration
+    # Update Node.js via NVM
     if [[ -f "$DOTFILES_DIR/shell/nvm.config" ]]; then
         source "$DOTFILES_DIR/shell/nvm.config"
         
@@ -548,6 +548,30 @@ update_environment() {
         fi
     else
         echo -e "${YELLOW}⚠️  NVM config not found${NC}"
+    fi
+    
+    echo ""
+    
+    # Update Go via GVM
+    if [[ -f "$DOTFILES_DIR/shell/gvm.config" ]]; then
+        source "$DOTFILES_DIR/shell/gvm.config"
+        
+        # Ensure GVM is loaded
+        if [[ -s "$HOME/.gvm/scripts/gvm" ]]; then
+            source "$HOME/.gvm/scripts/gvm"
+            
+            echo -e "${BLUE}📦 Installing Go $GO_VERSION...${NC}"
+            gvm install "$GO_VERSION"
+            
+            echo -e "${BLUE}🔧 Setting Go $GO_VERSION as default...${NC}"
+            gvm use "$GO_VERSION" --default
+            
+            echo -e "${GREEN}✅ Go environment updated!${NC}"
+        else
+            echo -e "${RED}❌ GVM not found. Please install GVM first.${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  GVM config not found${NC}"
     fi
 }
 

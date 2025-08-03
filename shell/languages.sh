@@ -1,28 +1,24 @@
 # Programming language environment setup
 
-# Get the directory containing this script (use zsh-compatible approach)
-if [[ -n "${BASH_SOURCE[0]}" ]]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-elif [[ -n "${(%):-%x}" ]]; then
-    SCRIPT_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
-else
-    # Fallback to known shell directory location
-    SCRIPT_DIR="$HOME/code/src/github.com/ianlivingstone/dotfiles/shell"
-fi
+# Note: SHELL_DIR is set by .zshrc before sourcing this file
+# It contains the path to the shell modules directory
 
 # Setup Rust/Cargo
 source "$HOME/.cargo/env"
 
-# Setup GVM (Go Version Manager)
-if [[ -s "$HOME/.gvm/scripts/gvm" ]]; then
-    source "$HOME/.gvm/scripts/gvm"
+# Setup GVM/Go (using dedicated gvm module)
+if [[ -f "$SHELL_DIR/gvm.sh" ]]; then
+    source "$SHELL_DIR/gvm.sh"
+else
+    echo "⚠️  GVM module not found at: $SHELL_DIR/gvm.sh"
 fi
 
-# Setup Go environment (after GVM)
-export GOPATH=~/code
-export GOBIN=$GOPATH/bin
-export PATH=$PATH:$GOBIN
+# Additional Go configuration
 export GOPRIVATE=github.com/keycardlabs
 
 # Setup Node.js/NVM (using dedicated nvm module)
-source "$SCRIPT_DIR/nvm.sh"
+if [[ -f "$SHELL_DIR/nvm.sh" ]]; then
+    source "$SHELL_DIR/nvm.sh"
+else
+    echo "⚠️  NVM module not found at: $SHELL_DIR/nvm.sh"
+fi

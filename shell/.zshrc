@@ -1,9 +1,20 @@
 # Modular ZSH Configuration
 # Load shell modules in the correct order
 
-# Get the directory containing the actual shell modules
-# For dotfiles managed by stow, we know the structure
-SHELL_DIR="$HOME/code/src/github.com/ianlivingstone/dotfiles/shell"
+# Get the directory containing the actual shell modules (handle symlinks)
+ZSHRC_PATH="${(%):-%N}"
+if [[ -L "$ZSHRC_PATH" ]]; then
+    ZSHRC_TARGET="$(readlink "$ZSHRC_PATH")"
+    if [[ "$ZSHRC_TARGET" != /* ]]; then
+        ZSHRC_PATH="$(cd "$(dirname "$ZSHRC_PATH")" && pwd)/$ZSHRC_TARGET"
+    else
+        ZSHRC_PATH="$ZSHRC_TARGET"
+    fi
+fi
+SHELL_DIR="$(cd "$(dirname "$ZSHRC_PATH")" && pwd)"
+
+# Load utility functions
+source "$SHELL_DIR/utils.sh"
 
 # Core shell configuration (PATH, completion, basic settings)
 source "$SHELL_DIR/core.sh"

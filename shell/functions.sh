@@ -106,9 +106,16 @@ dotfiles_status() {
         echo "   ❌ NVM: Not loaded"
     fi
     
-    if command -v go &>/dev/null; then
+    # Check if GVM is available (should be loaded by languages.sh module)
+    if command -v gvm &>/dev/null && [[ -n "$GVM_ROOT" ]]; then
+        local go_version=$(go version 2>/dev/null | awk '{print $3}' || echo "none")
+        local gvm_version=$(gvm version 2>/dev/null | head -1 || echo "unknown")
+        local default_version=$(grep "gvm_go_name" "$GVM_ROOT/environments/default" 2>/dev/null | cut -d'"' -f2 || echo "none")
+        echo "   ✅ Go: $go_version (via GVM $gvm_version)"
+        echo "       └── Default: $default_version"
+    elif command -v go &>/dev/null; then
         local go_version=$(go version 2>/dev/null | awk '{print $3}')
-        echo "   ✅ Go: $go_version"
+        echo "   ✅ Go: $go_version (system)"
     else
         echo "   ❌ Go: Not available"
     fi

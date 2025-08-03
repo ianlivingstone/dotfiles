@@ -127,10 +127,146 @@ nvim/.config/nvim/
 
 **Solution Benefits**:
 - **Graceful Degradation**: Each module handles missing dependencies safely
-- **Lazy Loading**: Plugins load only when needed (performance)
-- **Self-Contained**: Each plugin file is independent and shareable
-- **Clean Bootstrap**: Works perfectly on fresh installations
-- **Easy Debugging**: Know exactly which file contains what functionality
+- **Fast Startup**: Core functionality loads first, optional features later
+- **Easy Debugging**: Each module can be disabled independently
+- **Clean Dependencies**: Clear separation between config and plugins
+
+### Shell Module Architecture
+
+The shell package follows the same modular design principles as Neovim, providing a clean and maintainable Zsh configuration:
+
+```
+shell/
+├── .zshrc              # Minimal entry point & module loader
+├── utils.sh            # Shared utility functions
+├── core.sh             # PATH, completion, basic settings
+├── aliases.sh          # Command aliases
+├── languages.sh        # Programming language environments
+├── functions.sh        # Utility functions & status reporting
+├── security.sh         # Security validation
+├── agents.sh           # SSH and GPG agent management
+├── prompt.sh           # Shell prompt configuration
+├── nvm.sh              # Node.js version management module
+├── nvm.config          # Node.js version configuration
+├── gvm.sh              # Go version management module
+└── gvm.config          # Go version configuration
+```
+
+**Module Loading Order** (critical for dependencies):
+1. **`utils.sh`** - Utility functions (path resolution, config loading)
+2. **`core.sh`** - Basic shell setup (PATH, completion)
+3. **`aliases.sh`** - Command shortcuts
+4. **`languages.sh`** - Programming environments (NVM, GVM, Rust)
+5. **`functions.sh`** - Status reporting and utility functions
+6. **`security.sh`** - Key validation and security checks
+7. **`agents.sh`** - SSH/GPG agent management
+8. **`prompt.sh`** - Shell prompt and status display
+
+**Key Design Features**:
+
+- **Centralized Utilities**: `utils.sh` provides shared functions:
+  - `get_shell_dir()` - Portable path resolution with symlink support
+  - `load_config()` - Config file loading with fallbacks
+  - `add_to_path()` - Safe PATH management with deduplication
+  - `show_warning()` - Consistent warning message format
+
+- **Version Manager Modules**: Dedicated modules for each language:
+  - **Fast filesystem checks** instead of slow manager commands
+  - **Centralized configuration** in `.config` files
+  - **Unified update system** via `dotfiles update`
+  - **Proper PATH management** ensuring binaries are available
+
+- **Performance Optimized**:
+  - **No expensive operations** during shell startup
+  - **Warnings-only approach** for missing versions
+  - **Filesystem-based checks** for version detection
+  - **Lazy loading** where possible
+
+**Module Dependencies**:
+- All modules use `get_shell_dir()` for portable path resolution
+- Language modules use `load_config()`, `add_to_path()`, `show_warning()`
+- Functions module displays status using same utility patterns
+
+**Benefits of This Architecture**:
+- **DRY Principle**: No code duplication across modules
+- **Consistent Behavior**: All modules follow same patterns
+- **Easy Maintenance**: Fix bugs once in utils.sh
+- **Performance**: Fast startup with filesystem-based checks
+- **Portability**: Works across different environments and installation paths
+
+### Shell Module Development Guidelines
+
+When creating new shell modules, follow these established patterns:
+
+**1. Path Resolution**:
+```bash
+# ✅ ALWAYS use the utility function
+MODULE_DIR="$(get_shell_dir)"
+
+# ❌ NEVER hardcode paths
+MODULE_DIR="/Users/user/dotfiles/shell"  # Bad!
+```
+
+**2. Config File Loading**:
+```bash
+# ✅ Use centralized config loading
+load_config "$MODULE_DIR/tool.config" "TOOL_VERSION" "default-version"
+
+# ❌ Don't duplicate config logic
+if [[ -f "$MODULE_DIR/tool.config" ]]; then  # Bad!
+    source "$MODULE_DIR/tool.config"
+else
+    TOOL_VERSION="default"
+fi
+```
+
+**3. PATH Management**:
+```bash
+# ✅ Use safe PATH addition
+add_to_path "/path/to/tool/bin"
+
+# ❌ Don't manually manage PATH
+export PATH="/path/to/tool/bin:$PATH"  # Bad - can cause duplicates
+```
+
+**4. Warning Messages**:
+```bash
+# ✅ Use consistent warning format
+show_warning "Tool $VERSION not installed"
+
+# ❌ Don't hardcode warning messages
+echo "⚠️  Tool not found. Run dotfiles update"  # Bad - inconsistent
+```
+
+**5. Module Structure Template**:
+```bash
+#!/usr/bin/env zsh
+# Tool Name setup and configuration
+
+# Get module directory
+MODULE_DIR="$(get_shell_dir)"
+
+# Load configuration
+load_config "$MODULE_DIR/tool.config" "TOOL_VERSION" "default-version"
+
+# Check if tool manager exists
+if [[ -s "$HOME/.tool/scripts/tool" ]]; then
+    source "$HOME/.tool/scripts/tool"
+    
+    # Fast filesystem checks
+    if [[ ! -d "$HOME/.tool/versions/$TOOL_VERSION" ]]; then
+        show_warning "Tool $TOOL_VERSION not installed"
+    fi
+    
+    # Use configured version and manage PATH
+    if [[ -d "$HOME/.tool/versions/$TOOL_VERSION" ]]; then
+        tool use "$TOOL_VERSION" > /dev/null 2>&1 || true
+        add_to_path "$HOME/.tool/versions/$TOOL_VERSION/bin"
+    fi
+else
+    echo "❌ Tool not found. Install with: [installation command]"
+fi
+```
 
 ## Installation Process
 
