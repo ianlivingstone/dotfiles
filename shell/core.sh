@@ -2,6 +2,7 @@
 
 # General Config
 export PATH=/opt/homebrew/bin:$PATH
+export GPG_TTY=$(tty)
 eval $(brew shellenv)
 
 # Fix compinit security check

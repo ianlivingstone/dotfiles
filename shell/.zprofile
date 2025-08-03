@@ -1,3 +1,2 @@
-source "$HOME/.cargo/env"
-export GPG_TTY=$(tty)
-export PATH=/opt/homebrew/bin:$PATH
+# All configuration moved to modular system in .zshrc
+# This file is intentionally minimal to avoid duplication

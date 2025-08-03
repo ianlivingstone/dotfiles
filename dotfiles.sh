@@ -95,8 +95,8 @@ check_dependencies() {
         missing_deps+=("gvm")
     fi
     
-    if ! command -v cargo &> /dev/null && [[ ! -f "$HOME/.cargo/env" ]]; then
-        missing_deps+=("cargo")
+    if ! command -v rustup &> /dev/null; then
+        missing_deps+=("rustup")
     fi
     
     # Check for optional tools - none currently
@@ -139,8 +139,8 @@ check_dependencies() {
                 "gvm")
                     echo -e "  ${RED}•${NC} GVM: curl --proto '=https' --tlsv1.2 -sSfL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer | bash"
                     ;;
-                "cargo")
-                    echo -e "  ${RED}•${NC} Rust/Cargo: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+                "rustup")
+                    echo -e "  ${RED}•${NC} Rustup: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
                     ;;
             esac
         done

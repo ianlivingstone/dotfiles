@@ -1,9 +1,7 @@
 # Programming language environment setup
 
 # Setup Rust/Cargo
-if [[ -f "$HOME/.cargo/env" ]]; then
-    source "$HOME/.cargo/env"
-fi
+source "$HOME/.cargo/env"
 
 # Setup GVM (Go Version Manager)
 if [[ -s "/Users/ianlivingstone/.gvm/scripts/gvm" ]]; then
