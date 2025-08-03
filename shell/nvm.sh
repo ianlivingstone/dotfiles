@@ -39,6 +39,15 @@ if [[ -s "$NVM_DIR/nvm.sh" ]]; then
         
         # Ensure the specific version's bin directory is in PATH
         add_to_path "$NVM_DIR/versions/node/$NODE_VERSION/bin"
+        
+        # Check if global packages need to be installed (only during verbose/update mode)  
+        if [[ "$DOTFILES_UPDATE_MODE" == "1" ]]; then
+            echo "🔍 Checking global npm packages..."
+            local npm_globals_dir="$(dirname "$MODULE_DIR")/npm-globals"
+            if [[ -f "$npm_globals_dir/package.json" ]]; then
+                install_npm_globals "$npm_globals_dir/package.json"
+            fi
+        fi
     fi
     
 elif [[ -d "$HOME/.nvm" ]]; then

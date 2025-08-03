@@ -238,9 +238,29 @@ dotfiles_status() {
     echo "💡 Run './dotfiles.sh help' for management commands"
 }
 
-# Main dotfiles command - just calls the status function
+# Main dotfiles command - handles subcommands or shows status
 dotfiles() {
-    dotfiles_status
+    case "${1:-status}" in
+        "status")
+            dotfiles_status
+            ;;
+        "update")
+            # Get the dotfiles directory - assume it's in the standard location
+            local dotfiles_dir="$HOME/code/src/github.com/ianlivingstone/dotfiles"
+            if [[ -f "$dotfiles_dir/dotfiles.sh" ]]; then
+                "$dotfiles_dir/dotfiles.sh" update
+            else
+                echo "⚠️  Dotfiles script not found at: $dotfiles_dir/dotfiles.sh"
+                return 1
+            fi
+            ;;
+        *)
+            echo "Usage: dotfiles [status|update]"
+            echo "  status  - Show dotfiles status (default)"
+            echo "  update  - Update development environment"
+            return 1
+            ;;
+    esac
 }
 
 # Legacy aliases for backward compatibility

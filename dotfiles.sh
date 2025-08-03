@@ -7,7 +7,8 @@ set -e
 # Get the directory of this script
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# List of packages to manage
+# List of packages to manage with stow
+# Note: npm-globals is intentionally excluded - it's a config directory, not stowed
 PACKAGES=(
     "shell"
     "git"
@@ -76,6 +77,10 @@ check_dependencies() {
         missing_deps+=("rg")
     fi
     
+    if ! command -v jq &> /dev/null; then
+        missing_deps+=("jq")
+    fi
+    
     if ! command -v brew &> /dev/null; then
         missing_deps+=("brew")
     fi
@@ -99,6 +104,11 @@ check_dependencies() {
     
     if ! command -v rustup &> /dev/null; then
         missing_deps+=("rustup")
+    fi
+    
+    # Check for security tools
+    if ! command -v gpg &> /dev/null; then
+        missing_deps+=("gpg")
     fi
     
     # Check for optional tools - none currently
@@ -126,6 +136,9 @@ check_dependencies() {
                 "rg")
                     echo -e "  ${RED}•${NC} Ripgrep: brew install ripgrep"
                     ;;
+                "jq")
+                    echo -e "  ${RED}•${NC} jq: brew install jq"
+                    ;;
                 "brew")
                     echo -e "  ${RED}•${NC} Homebrew: /bin/bash -c \"\$($SECURE_CURL -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
                     ;;
@@ -143,6 +156,9 @@ check_dependencies() {
                     ;;
                 "rustup")
                     echo -e "  ${RED}•${NC} Rustup: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+                    ;;
+                "gpg")
+                    echo -e "  ${RED}•${NC} GnuPG: brew install gnupg"
                     ;;
             esac
         done
@@ -528,6 +544,9 @@ show_status() {
 update_environment() {
     echo -e "${GREEN}🔄 Updating Development Environment...${NC}"
     
+    # Set update mode for modules to install global packages
+    export DOTFILES_UPDATE_MODE=1
+    
     # Update Node.js via NVM
     if [[ -f "$DOTFILES_DIR/shell/nvm.config" ]]; then
         source "$DOTFILES_DIR/shell/nvm.config"
@@ -541,6 +560,14 @@ update_environment() {
             
             echo -e "${BLUE}🔧 Setting Node.js $NODE_VERSION as default...${NC}"
             nvm alias default "$NODE_VERSION"
+            
+            # Install global npm packages
+            echo -e "${BLUE}📦 Installing global npm packages...${NC}"
+            if [[ -f "$DOTFILES_DIR/npm-globals/package.json" ]]; then
+                # Load utility functions for npm globals installation
+                source "$DOTFILES_DIR/shell/utils.sh"
+                install_npm_globals "$DOTFILES_DIR/npm-globals/package.json"
+            fi
             
             echo -e "${GREEN}✅ Node.js environment updated!${NC}"
         else
@@ -573,6 +600,9 @@ update_environment() {
     else
         echo -e "${YELLOW}⚠️  GVM config not found${NC}"
     fi
+    
+    # Clean up update mode
+    unset DOTFILES_UPDATE_MODE
 }
 
 # Main script logic

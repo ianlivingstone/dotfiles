@@ -18,6 +18,9 @@ nvim/.config/nvim/*.backup
 *.swo
 *~
 
+# Node.js
+**/node_modules/
+
 # Any accidentally created machine configs in wrong location
 **/machine.config
 **/machines/

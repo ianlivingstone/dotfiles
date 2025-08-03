@@ -55,3 +55,43 @@ add_to_path() {
 show_warning() {
     echo "⚠️  $1. Run: dotfiles update"
 }
+
+# Install global npm packages from package.json
+# Usage: install_npm_globals package_json_file
+install_npm_globals() {
+    local package_json="$1"
+    
+    if [[ ! -f "$package_json" ]]; then
+        echo "⚠️  Global packages config not found: $package_json"
+        return 1
+    fi
+    
+    echo "📦 Installing global npm packages from $(basename "$package_json")..."
+    
+    # Use npm to install all dependencies globally
+    # Create a temp directory and copy the package.json there
+    local temp_dir=$(mktemp -d)
+    cp "$package_json" "$temp_dir/package.json"
+    
+    # Change to temp directory and install all dependencies globally
+    (
+        cd "$temp_dir"
+        # Extract package names and install them globally
+        if command -v jq &>/dev/null; then
+            local packages=$(jq -r '.dependencies | keys[]' package.json 2>/dev/null | tr '\n' ' ')
+        else
+            # Fallback parsing
+            local packages=$(grep -A 20 '"dependencies"' package.json | grep -o '"[^"]*"' | grep -v "dependencies\|latest" | tr -d '"' | tr '\n' ' ')
+        fi
+        
+        if [[ -n "$packages" ]]; then
+            echo "  → Installing: $packages"
+            npm install -g $packages
+        else
+            echo "⚠️  No packages found in dependencies"
+        fi
+    )
+    
+    # Clean up temp directory
+    rm -rf "$temp_dir"
+}

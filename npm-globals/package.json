@@ -1,0 +1,14 @@
+{
+  "name": "dotfiles-global-packages",
+  "description": "Global npm packages for dotfiles environment",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/claude-code": "latest",
+    "npm-check-updates": "latest",
+    "nodemon": "latest",
+    "prettier": "latest",
+    "eslint": "latest",
+    "typescript": "latest"
+  }
+}
