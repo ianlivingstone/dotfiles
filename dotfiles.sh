@@ -518,7 +518,7 @@ show_status() {
 }
 
 # Main script logic
-case "${1:-install}" in
+case "${1:-help}" in
     "install")
         install_dotfiles
         ;;
