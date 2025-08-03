@@ -72,6 +72,24 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ./dotfiles.sh help         # Show all available commands
 ```
 
+### 📦 **Neovim Plugin Management**
+
+This setup uses [lazy.nvim](https://lazy.folke.io/) with controlled updates:
+
+```vim
+" In Neovim - check plugin status and updates
+:Lazy                      " Open plugin manager UI
+:Lazy sync                 " Update plugins and lockfile
+:Lazy update               " Update plugins only
+:Lazy clean                " Remove unused plugins
+```
+
+**How it works:**
+- Plugins are locked to specific versions via `lazy-lock.json`
+- When you modify plugin config, lazy.nvim **notifies** you but **doesn't auto-update**
+- You control when to update with `:Lazy sync` (recommended) or `:Lazy update`
+- The lockfile is committed to git, ensuring consistent plugin versions across machines
+
 ## 📁 What Gets Installed
 
 - **Shell configuration** → `~/.zshrc`, `~/.zprofile`
@@ -101,6 +119,7 @@ Every new shell shows a one-line summary:
 - **Fuzzy finding** for files, text search, and buffers (`<Space>ff`, `<Space>fg`)
 - **Smart autocompletion** with context-aware suggestions
 - **Auto-formatting** and import organization on save
+- **Controlled plugin updates** - notifies when config changes, manual update with `:Lazy sync`
 
 ### 🔐 **Security & Identity Management**
 - **Per-machine Git identities** (different name/email per machine)

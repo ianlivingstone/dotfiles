@@ -32,6 +32,14 @@ end
 
 -- Setup lazy with all collected plugins
 lazy.setup(plugins, {
+  lockfile = vim.fn.stdpath("config") .. "/lazy-lock.json",
+  install = {
+    missing = true,
+  },
+  change_detection = {
+    enabled = true, -- Detect config changes but don't auto-update
+    notify = true,  -- Notify about changes and suggest manual update
+  },
   rocks = {
     enabled = true,
     root = vim.fn.stdpath("data") .. "/lazy-rocks",

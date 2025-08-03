@@ -335,6 +335,40 @@ configure_machine_keys() {
     echo -e "${BLUE}📍 SSH config: $ssh_config${NC}"
 }
 
+configure_hostname() {
+    echo -e "${BLUE}🏠 Configuring machine hostname...${NC}"
+    echo ""
+    
+    local current_hostname=$(hostname -s)
+    echo -e "${YELLOW}Current hostname: $current_hostname${NC}"
+    
+    read -p "Enter new hostname (or press Enter to keep current): " new_hostname
+    
+    if [[ -z "$new_hostname" ]]; then
+        echo -e "${YELLOW}⚠️  Keeping current hostname: $current_hostname${NC}"
+        return 0
+    fi
+    
+    # Validate hostname format
+    if [[ ! "$new_hostname" =~ ^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$ ]]; then
+        echo -e "${RED}❌ Invalid hostname format. Use only letters, numbers, and hyphens${NC}"
+        return 1
+    fi
+    
+    echo -e "${YELLOW}Setting hostname to: $new_hostname${NC}"
+    
+    # Set hostname (requires sudo)
+    if sudo scutil --set HostName "$new_hostname" && \
+       sudo scutil --set LocalHostName "$new_hostname" && \
+       sudo scutil --set ComputerName "$new_hostname"; then
+        echo -e "${GREEN}✅ Hostname set to: $new_hostname${NC}"
+        echo -e "${BLUE}💡 Changes will take effect after restart${NC}"
+    else
+        echo -e "${RED}❌ Failed to set hostname (check sudo permissions)${NC}"
+        return 1
+    fi
+}
+
 install_dotfiles() {
     echo -e "${GREEN}🏠 Installing dotfiles...${NC}"
     
@@ -395,6 +429,11 @@ install_dotfiles() {
     
     # Configure machine-specific settings
     configure_machine_keys
+    
+    echo ""
+    
+    # Configure hostname
+    configure_hostname
     
     echo ""
     echo -e "${GREEN}✅ Dotfiles installation complete!${NC}"
