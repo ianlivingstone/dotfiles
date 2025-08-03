@@ -88,9 +88,49 @@ PACKAGES=(
     "ssh"       # SSH configuration with includes
     "tmux"      # Terminal multiplexer setup
     "misc"      # Starship prompt, dircolors
-    "nvim"      # Neovim editor configuration
+    "nvim"      # Neovim editor configuration (modular)
 )
 ```
+
+### Neovim Modular Architecture
+
+The Neovim package follows a sophisticated modular design that exemplifies our architectural principles:
+
+```
+nvim/.config/nvim/
+├── init.lua                    # Minimal entry point (12 lines)
+└── lua/
+    ├── config/
+    │   ├── options.lua        # Vim settings (no dependencies)
+    │   ├── keymaps.lua        # Global keymaps (no dependencies)
+    │   ├── autocmds.lua       # File-specific autocommands
+    │   └── lazy-bootstrap.lua # Plugin manager installation
+    └── plugins/
+        ├── init.lua           # Main plugin loader & orchestrator
+        ├── colorscheme.lua    # Theme configuration
+        ├── completion.lua     # Autocompletion system
+        ├── lsp.lua           # Language Server Protocol
+        ├── telescope.lua     # Fuzzy finder
+        ├── treesitter.lua    # Syntax highlighting
+        ├── editor.lua        # File explorer & editor enhancements
+        ├── ui.lua           # Status line & UI components
+        └── coding.lua       # Coding utilities
+```
+
+**Why This Structure?**
+
+**Problem Solved**: The original `init.lua` was a 446-line monolithic file mixing bootstrap code, settings, plugin configurations, and autocommands. This violated multiple design principles:
+- **Single Responsibility**: One file doing everything
+- **Fail Fast**: Plugin failures could break entire config
+- **Maintainability**: Hard to debug or modify specific features
+- **Fresh Installation**: Couldn't bootstrap from scratch reliably
+
+**Solution Benefits**:
+- **Graceful Degradation**: Each module handles missing dependencies safely
+- **Lazy Loading**: Plugins load only when needed (performance)
+- **Self-Contained**: Each plugin file is independent and shareable
+- **Clean Bootstrap**: Works perfectly on fresh installations
+- **Easy Debugging**: Know exactly which file contains what functionality
 
 ## Installation Process
 
@@ -117,31 +157,47 @@ The installer checks for and guides installation of:
 
 ### Problems Solved
 
-**❌ Traditional Approach Issues:**
-- Hardcoded personal information in git
-- Manual key management in shell scripts
-- Inconsistent configuration across machines  
-- Complex shell startup with key loading loops
+**❌ Traditional Dotfiles Issues:**
+- **Monolithic configurations**: Single massive files mixing concerns
+- **Hardcoded personal information**: Personal data committed to git
+- **Manual dependency management**: Shell scripts for key/environment setup
+- **Inconsistent behavior**: Different configs per machine with manual syncing
+- **Fragile installations**: One failure breaks everything
+- **Poor performance**: Heavy shell startup loading everything upfront
 
 **✅ Our Solution Benefits:**
-- Clean git repository with no personal data
-- Native tool configuration (faster, more reliable)
-- Machine-specific configs in proper XDG locations
-- Fast shell startup with lazy configuration loading
+- **Clean separation**: Shared vs machine-specific configurations
+- **Native tool support**: Git `[include]`, SSH `Include`, lazy.nvim modules
+- **Graceful degradation**: Components fail independently without breaking others
+- **Performance optimization**: Lazy loading and minimal shell overhead
+- **Security by default**: GPG signing required, HTTPS-only, proper key isolation
+- **XDG compliance**: Standard directory structures and user customization
 
 ### Development Workflow
 
 **Adding New Configuration:**
-1. Add base/shared config to appropriate package directory
-2. Use native tool includes for machine-specific parts
-3. Update installer if new dependencies required
-4. Test on multiple machines to ensure portability
+1. **Dotfiles packages**: Add base/shared config to appropriate package directory
+2. **Machine-specific**: Use native tool includes for personal data
+3. **Dependencies**: Update installer if new tools required
+4. **Testing**: Verify on multiple machines for portability
+
+**Adding New Neovim Plugin:**
+1. **Create module**: Add new `.lua` file in `plugins/` directory
+2. **Self-contained**: Include graceful loading checks and error handling
+3. **Lazy loading**: Use appropriate triggers (`ft`, `cmd`, `keys`, `event`)
+4. **Integration**: Add to plugin loader in `plugins/init.lua`
 
 **Machine Setup:**
 1. Clone repository: `git clone <repo> ~/.dotfiles`
 2. Run installer: `cd ~/.dotfiles && ./dotfiles.sh install`
 3. Follow interactive prompts for machine-specific setup
 4. Restart shell or source configuration
+
+**Neovim Fresh Installation:**
+1. Delete plugin cache: `rm -rf ~/.local/share/nvim/`
+2. Start Neovim: `nvim`
+3. Lazy.nvim auto-bootstraps and installs all plugins
+4. LSP servers install automatically via Mason
 
 ## Security Considerations
 
@@ -164,13 +220,36 @@ The installer checks for and guides installation of:
 ## Future Considerations
 
 ### Extensibility
-- Package system allows easy addition of new tools
-- Include system supports conditional configuration
-- XDG compliance ensures forward compatibility
+- **Package system**: Easy addition of new tools via stow packages
+- **Include system**: Supports conditional and machine-specific configuration
+- **Plugin modularity**: Neovim plugins can be added/removed independently
+- **XDG compliance**: Forward compatibility with evolving standards
 
 ### Maintenance
-- Single source of truth for shared configuration
-- Machine-specific configs easily regenerated
-- Clear separation makes debugging straightforward
+- **Single source of truth**: Shared configuration in one place
+- **Machine-specific regeneration**: Easy to recreate personal configs
+- **Clear debugging**: Modular structure isolates issues quickly
+- **Performance monitoring**: Each component can be profiled independently
 
-This architecture balances security, maintainability, and user experience while following established conventions and best practices.
+### Real-World Examples
+
+**Multi-Machine Developer Scenario:**
+```
+Work Laptop:
+- Git: work-email@company.com + work GPG key
+- SSH: Work GitHub/GitLab keys + VPN keys
+- Neovim: Same editor experience across machines
+
+Personal Laptop:
+- Git: personal@gmail.com + personal GPG key  
+- SSH: Personal GitHub keys + server keys
+- Neovim: Identical configuration, different LSP projects
+```
+
+**Team Sharing:**
+- **Fork repository**: Remove personal data, keep shared configs
+- **Selective sharing**: Share specific plugin configurations
+- **Corporate compliance**: Machine-specific configs stay local
+- **Onboarding**: New team members get consistent tooling
+
+This architecture demonstrates how proper separation of concerns, native tool support, and graceful error handling create a robust, maintainable system that scales from individual use to team adoption while maintaining security and performance.
