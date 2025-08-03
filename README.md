@@ -1,148 +1,128 @@
 # Ian Livingstone's Dotfiles
 
-My personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/) for easy installation and organization.
+Modern, secure dotfiles with machine-specific configuration support. Built for developers who work across multiple machines with different identities and keys.
 
-## Features
+## ✨ What You Get
 
-- **Shell**: Zsh configuration with Starship prompt and startup status message
-- **Git**: Git configuration and aliases
-- **Neovim**: Modern Neovim configuration with LSP, autocompletion, and file navigation
-- **Tmux**: Terminal multiplexer setup with focus events
-- **Starship**: Custom prompt with language detection and clean git status
-- **Status Message**: One-line system info displayed on shell startup
-- **Misc**: Additional tools and color schemes
+### 🚀 **Modern Development Environment**
+- **Zsh** with Starship prompt showing git status, language versions, and system info
+- **Neovim** with LSP, autocompletion, fuzzy finding, and syntax highlighting
+- **Tmux** for terminal multiplexing and session management
+- **Git** with security-first configuration and helpful aliases
 
-## Requirements
+### 🔒 **Security by Default**
+- **GPG signing** required for all commits and tags
+- **SSH key management** with proper per-machine configuration
+- **HTTPS-only** curl commands with modern TLS requirements
 
-- **macOS** (other Unix systems should work with minor modifications)
-- **Homebrew** package manager
-- **GNU Stow** for symlink management
-- **Git** for version control
-- **Zsh** as the shell
-- **Starship** prompt (installed automatically)
-- **Luarocks** for Neovim plugin management (required for some nvim plugins)
-- **Ripgrep** for fast text search in Neovim/Telescope
-- **Neovim** for text editing (optional but recommended)
-- **Tmux** for terminal multiplexing (optional but recommended)
-- **Node.js** for some LSP servers and development tools (optional but recommended)
+### 🖥️ **Multi-Machine Support**
+- **Different Git identities** per machine (work email vs personal email)
+- **Different SSH keys** per machine (work keys vs personal keys)  
+- **Different GPG keys** per machine for commit signing
+- **Clean separation** between shared config and personal data
 
-## Installation
-
-### Quick Install
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/ianlivingstone/dotfiles.git ~/.dotfiles
-   ```
-
-2. Install dependencies:
-   ```bash
-   # Install Homebrew if not already installed
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   
-   # Install required dependencies
-   brew install stow starship luarocks ripgrep
-   
-   # Install optional but recommended tools
-   brew install neovim tmux node
-   ```
-
-3. Run the installation script:
-   ```bash
-   cd ~/.dotfiles
-   ./dotfiles.sh install
-   ```
-
-4. Restart your shell or source the configuration:
-   ```bash
-   source ~/.zshrc
-   ```
-
-### Manual Installation
-
-If you prefer to install packages individually:
+## 🚀 Quick Start
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/ianlivingstone/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 
-# Install specific packages
-stow shell    # Zsh configuration
-stow git      # Git configuration  
-stow tmux     # Tmux configuration
-stow misc     # Miscellaneous tools
-stow nvim     # Neovim configuration
+# 2. Run the installer (handles everything!)
+./dotfiles.sh install
+
+# 3. Restart your shell
+exec zsh
 ```
 
-## Package Structure
+The installer will:
+- ✅ Check for required dependencies and show install commands if missing
+- ✅ Prompt for your Git name and email for this machine
+- ✅ Detect and let you select SSH keys to use
+- ✅ Detect and let you select a GPG key for commit signing
+- ✅ Configure everything automatically
 
-```
-dotfiles/
-├── shell/          # Zsh configuration
-│   ├── .zshrc
-│   └── .zprofile
-├── git/            # Git configuration
-│   └── .gitconfig
-├── tmux/           # Tmux configuration
-│   └── .tmux.conf
-├── misc/           # Miscellaneous tools
-│   ├── .dircolors
-│   └── starship.toml
-├── nvim/           # Neovim configuration
-│   └── .config/nvim/init.lua
-└── dotfiles.sh     # Installation/management script
+## 🔧 Dependencies
+
+The installer checks for these and provides install commands if missing:
+
+**Required Tools:**
+```bash
+brew install stow starship luarocks ripgrep neovim tmux
 ```
 
-## Usage
+**Development Managers:**
+```bash
+# Node.js version manager
+curl -o- --proto '=https' --tlsv1.2 -sSfL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Go version manager  
+bash < <(curl --proto '=https' --tlsv1.2 -sSfL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+
+# Rust toolchain
+curl --proto '=https' --tlsv1.2 -sSfL https://sh.rustup.rs | sh
+```
+
+## 🛠️ Management Commands
 
 ```bash
-./dotfiles.sh install    # Install dotfiles with GNU Stow
-./dotfiles.sh status     # Check symlink status  
-./dotfiles.sh uninstall  # Remove all symlinks
-./dotfiles.sh help       # Show all commands
+./dotfiles.sh install      # Install/configure dotfiles (interactive)
+./dotfiles.sh status       # Check installation status
+./dotfiles.sh uninstall    # Remove all dotfiles symlinks  
+./dotfiles.sh help         # Show all available commands
 ```
 
-**Dependencies**: GNU Stow, Starship, Git, Zsh, Luarocks, Ripgrep (auto-checked on install)
+## 📁 What Gets Installed
 
-## Customization
+- **Shell configuration** → `~/.zshrc`, `~/.zprofile`
+- **Git configuration** → `~/.gitconfig` (with machine-specific includes)
+- **SSH configuration** → `~/.ssh/config` (with machine-specific includes)
+- **Tmux configuration** → `~/.tmux.conf`
+- **Neovim configuration** → `~/.config/nvim/`
+- **Starship prompt** → `~/.config/starship.toml`
 
-Feel free to fork this repository and customize the configurations to your needs. The modular structure makes it easy to add or remove packages.
+**Machine-specific configs** are stored in `~/.config/git/` and `~/.config/ssh/` (never in git repo).
 
-## What You Get
+## 🎯 Key Features
 
-### Shell Status Message
-Every new shell displays a one-line status with:
+### 📊 **Smart Shell Status**
+Every new shell shows a one-line summary:
 ```
 🏠 user@hostname ~/directory | ⏱ uptime | 📦 git-branch ✓ | 🕐 time
 ```
 
-### Starship Prompt
-- **Language Detection**: Automatically shows versions for Node.js, Go, Python, Rust, Java
-- **Git Integration**: Clean status indicators (✓ clean, ± dirty, ⇡ ahead)
-- **Context Aware**: Shows Docker, Kubernetes, AWS context when relevant
-- **Fast & Lightweight**: Only loads modules when needed
+### 🎨 **Intelligent Prompt** 
+- **Language versions** automatically displayed (Node.js, Go, Python, Rust, Java)
+- **Git status** with clean indicators (✓ clean, ± dirty, ⇡ ahead)
+- **Context awareness** for Docker, Kubernetes, AWS when relevant
 
-### Neovim Features
-- **LSP Integration**: Full language server support for TypeScript, Go, and more
-- **Smart Autocompletion**: Context-aware suggestions with snippets
-- **File Navigation**: Fuzzy finding with Telescope (files, text search, buffers)
-- **Auto-formatting**: Automatic code formatting and import organization on save
-- **Syntax Highlighting**: Advanced syntax highlighting with Treesitter
-- **Plugin Management**: Modern plugin management with lazy loading
+### ⚡ **Powerful Editor**
+- **LSP integration** for TypeScript, Go, Python, and more
+- **Fuzzy finding** for files, text search, and buffers (`<Space>ff`, `<Space>fg`)
+- **Smart autocompletion** with context-aware suggestions
+- **Auto-formatting** and import organization on save
 
-### Key Bindings
-- **Leader key**: `<Space>`
-- **Save**: `<leader>w`
-- **Quit**: `<leader>q`
-- **File finder**: `<leader>ff` (Telescope)
-- **Text search**: `<leader>fg` (Telescope live grep)
-- **Buffer switcher**: `<leader>fb` (Telescope buffers)
-- **Go organize imports**: `<leader>gi` (Go files only)
+### 🔐 **Security & Identity Management**
+- **Per-machine Git identities** (different name/email per machine)
+- **Per-machine SSH keys** (work keys vs personal keys)
+- **Required GPG signing** for all commits and tags
+- **Secure defaults** for all network operations
 
-## Dependencies Included
+## 🏗️ Architecture
 
-- **Starship**: Fast, customizable prompt with language detection
-- **SSH Agent**: Automatic SSH key management
-- **GPG Agent**: GPG key management with SSH support
-- **NVM**: Node.js version management
-- **GVM**: Go version management  
-- **Cargo**: Rust package manager integration
+This dotfiles system uses a **layered configuration approach**:
+
+- **Base configurations** live in this git repository (shareable settings)
+- **Machine-specific data** lives in `~/.config/` (private, never in git)
+- **Native tool includes** handle the layering (Git `[include]`, SSH `Include`)
+
+For detailed information about the design principles and architecture decisions, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## 🤝 Customization
+
+Fork this repository and modify to your needs! The modular package structure makes it easy to:
+- Add new tools by creating new package directories
+- Remove tools by excluding them from the `PACKAGES` array in `dotfiles.sh`
+- Customize existing configurations by editing the files in each package
+
+The separation between shared and machine-specific configuration means you can safely share your fork while keeping personal data private.
