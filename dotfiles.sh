@@ -23,6 +23,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Secure curl command with HTTPS-only enforcement
+SECURE_CURL="curl --proto '=https' --tlsv1.2"
+
 show_help() {
     echo "🏠 Dotfiles Management Script"
     echo ""
@@ -70,23 +73,32 @@ check_dependencies() {
         missing_deps+=("rg")
     fi
     
-    # Check for optional but recommended tools
-    local optional_missing=()
+    if ! command -v brew &> /dev/null; then
+        missing_deps+=("brew")
+    fi
+    
     if ! command -v nvim &> /dev/null; then
-        optional_missing+=("nvim")
+        missing_deps+=("nvim")
     fi
     
     if ! command -v tmux &> /dev/null; then
-        optional_missing+=("tmux")
+        missing_deps+=("tmux")
     fi
     
-    if ! command -v brew &> /dev/null; then
-        optional_missing+=("brew")
+    # Check for development environment managers
+    if ! command -v nvm &> /dev/null && [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
+        missing_deps+=("nvm")
     fi
     
-    if ! command -v node &> /dev/null; then
-        optional_missing+=("node")
+    if ! command -v gvm &> /dev/null && [[ ! -s "$HOME/.gvm/scripts/gvm" ]]; then
+        missing_deps+=("gvm")
     fi
+    
+    if ! command -v cargo &> /dev/null && [[ ! -f "$HOME/.cargo/env" ]]; then
+        missing_deps+=("cargo")
+    fi
+    
+    # Check for optional tools - none currently
     
     # Report missing required dependencies
     if [ ${#missing_deps[@]} -ne 0 ]; then
@@ -111,6 +123,24 @@ check_dependencies() {
                 "rg")
                     echo -e "  ${RED}•${NC} Ripgrep: brew install ripgrep"
                     ;;
+                "brew")
+                    echo -e "  ${RED}•${NC} Homebrew: /bin/bash -c \"\$($SECURE_CURL -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+                    ;;
+                "nvim")
+                    echo -e "  ${RED}•${NC} Neovim: brew install neovim"
+                    ;;
+                "tmux")
+                    echo -e "  ${RED}•${NC} Tmux: brew install tmux"
+                    ;;
+                "nvm")
+                    echo -e "  ${RED}•${NC} NVM: $SECURE_CURL -o- -sSfL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash"
+                    ;;
+                "gvm")
+                    echo -e "  ${RED}•${NC} GVM: bash < <($SECURE_CURL -sSfL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)"
+                    ;;
+                "cargo")
+                    echo -e "  ${RED}•${NC} Rust/Cargo: $SECURE_CURL -sSfL https://sh.rustup.rs | sh"
+                    ;;
             esac
         done
         echo ""
@@ -118,27 +148,10 @@ check_dependencies() {
         exit 1
     fi
     
-    # Report missing optional dependencies
-    if [ ${#optional_missing[@]} -ne 0 ]; then
-        echo -e "${YELLOW}⚠️  Optional tools not found (recommended):${NC}"
-        for dep in "${optional_missing[@]}"; do
-            case $dep in
-                "nvim")
-                    echo -e "  ${YELLOW}•${NC} Neovim: brew install neovim"
-                    ;;
-                "tmux")
-                    echo -e "  ${YELLOW}•${NC} Tmux: brew install tmux"
-                    ;;
-                "brew")
-                    echo -e "  ${YELLOW}•${NC} Homebrew: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-                    ;;
-                "node")
-                    echo -e "  ${YELLOW}•${NC} Node.js: brew install node"
-                    ;;
-            esac
-        done
-        echo ""
-    fi
+    # Additional setup instructions
+    echo -e "${BLUE}💡 After installing dependencies, recommended setup:${NC}"
+    echo -e "  ${BLUE}•${NC} Install Node.js: nvm install --lts && nvm use --lts"
+    echo ""
 }
 
 install_dotfiles() {
