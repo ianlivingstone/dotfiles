@@ -95,11 +95,15 @@ dotfiles_status() {
     fi
     
     # Programming Languages
-    if [[ -n "$NVM_DIR" ]] && [[ -s "$NVM_DIR/nvm.sh" ]]; then
+    # Check if NVM is available (should be loaded by languages.sh module)
+    if command -v nvm &>/dev/null; then
         local node_version=$(node --version 2>/dev/null || echo "none")
-        echo "   ✅ Node.js: $node_version (via NVM)"
+        local nvm_version=$(nvm --version 2>/dev/null || echo "unknown")
+        local default_version=$(cat "$NVM_DIR/alias/default" 2>/dev/null || echo "none")
+        echo "   ✅ Node.js: $node_version (via NVM $nvm_version)"
+        echo "       └── Default: $default_version"
     else
-        echo "   ❌ NVM: Not configured"
+        echo "   ❌ NVM: Not loaded"
     fi
     
     if command -v go &>/dev/null; then

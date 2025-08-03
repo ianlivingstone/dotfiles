@@ -37,6 +37,7 @@ show_help() {
     echo "  uninstall   Remove all dotfile symlinks"
     echo "  reinstall   Uninstall then install dotfiles"
     echo "  status      Show status of dotfile symlinks"
+    echo "  update      Update development environment versions"
     echo "  help        Show this help message"
     echo ""
     echo "Examples:"
@@ -44,6 +45,7 @@ show_help() {
     echo "  $0 install      # Install dotfiles"
     echo "  $0 uninstall    # Remove dotfiles"
     echo "  $0 status       # Check status"
+    echo "  $0 update       # Update Node.js and other versions"
 }
 
 check_dependencies() {
@@ -453,6 +455,12 @@ install_dotfiles() {
     
     echo ""
     echo -e "${GREEN}✅ Dotfiles installation complete!${NC}"
+    
+    # Update development environment versions
+    echo ""
+    update_environment
+    
+    echo ""
     echo -e "${BLUE}🔄 Please restart your shell or run 'source ~/.zshrc' to apply changes${NC}"
 }
 
@@ -517,6 +525,32 @@ show_status() {
     dotfiles_status
 }
 
+update_environment() {
+    echo -e "${GREEN}🔄 Updating Development Environment...${NC}"
+    
+    # Load NVM configuration
+    if [[ -f "$DOTFILES_DIR/shell/nvm.config" ]]; then
+        source "$DOTFILES_DIR/shell/nvm.config"
+        
+        # Ensure NVM is loaded
+        if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+            source "$HOME/.nvm/nvm.sh"
+            
+            echo -e "${BLUE}📦 Installing Node.js $NODE_VERSION...${NC}"
+            nvm install "$NODE_VERSION"
+            
+            echo -e "${BLUE}🔧 Setting Node.js $NODE_VERSION as default...${NC}"
+            nvm alias default "$NODE_VERSION"
+            
+            echo -e "${GREEN}✅ Node.js environment updated!${NC}"
+        else
+            echo -e "${RED}❌ NVM not found. Please install NVM first.${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  NVM config not found${NC}"
+    fi
+}
+
 # Main script logic
 case "${1:-help}" in
     "install")
@@ -532,6 +566,9 @@ case "${1:-help}" in
         ;;
     "status")
         show_status
+        ;;
+    "update")
+        update_environment
         ;;
     "help"|"-h"|"--help")
         show_help
