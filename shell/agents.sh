@@ -3,7 +3,6 @@
 start_ssh_agent() {
     # Check if ssh-agent is already running and accessible
     if [[ -n "$SSH_AUTH_SOCK" ]] && ssh-add -l &>/dev/null; then
-        echo "🔐 SSH Agent: Already running"
         return 0  # Agent is running and accessible
     fi
     
@@ -12,32 +11,25 @@ start_ssh_agent() {
     if [[ -f "$agent_env" ]]; then
         source "$agent_env" > /dev/null
         if ssh-add -l &>/dev/null; then
-            echo "🔐 SSH Agent: Connected to existing agent"
             return 0  # Successfully connected to existing agent
         fi
     fi
     
-    # Start new agent
-    echo "🔐 SSH Agent: Starting new agent..."
-    ssh-agent > "$agent_env"
+    # Start new agent (only show output if starting fails)
+    if ! ssh-agent > "$agent_env"; then
+        echo "❌ Failed to start SSH agent"
+        return 1
+    fi
     source "$agent_env" > /dev/null
-    echo "🔐 SSH Agent: ✅ Started successfully"
     
     # Load SSH keys from machine-specific config if available
     local xdg_config="${XDG_CONFIG_HOME:-$HOME/.config}"
     if [[ -f "$xdg_config/ssh/machine.config" ]]; then
-        echo "🔑 Loading SSH keys from machine configuration..."
-        # Extract IdentityFile paths and add them
+        # Extract IdentityFile paths and add them (keys already validated by security.sh)
         grep "IdentityFile" "$xdg_config/ssh/machine.config" | while read -r line; do
             local key_path=$(echo "$line" | awk '{print $2}' | sed "s|~|$HOME|")
             if [[ -f "$key_path" ]]; then
-                local key_name=$(basename "$key_path")
-                echo "   Loading key: $key_name"
-                if ssh-add "$key_path" 2>/dev/null; then
-                    echo "   ✅ Successfully loaded: $key_name"
-                else
-                    echo "   ❌ Failed to load or key already loaded: $key_name"
-                fi
+                ssh-add "$key_path" &>/dev/null
             fi
         done
     fi
@@ -47,24 +39,32 @@ start_gpg_agent() {
     # Set GPG TTY for proper operation
     export GPG_TTY=$(tty)
     
+    # Set up machine-specific GPG configuration
+    local xdg_config="${XDG_CONFIG_HOME:-$HOME/.config}"
+    if [[ -f "$xdg_config/gpg/machine.config" ]]; then
+        # Create symlink to machine-specific GPG config if it doesn't exist
+        local gpg_home="${GNUPGHOME:-$HOME/.gnupg}"
+        if [[ ! -f "$gpg_home/gpg.conf" ]] || [[ ! -L "$gpg_home/gpg.conf" ]]; then
+            mkdir -p "$gpg_home"
+            ln -sf "$xdg_config/gpg/machine.config" "$gpg_home/gpg.conf"
+        fi
+    fi
+    
     # Check if gpg-agent is running and responsive
     if pgrep -x "gpg-agent" > /dev/null && gpg-connect-agent --quiet /bye &>/dev/null; then
-        echo "🔐 GPG Agent: Already running"
         return 0  # Agent is running and responsive
     fi
     
     # Start gpg-agent with SSH support
-    echo "🔐 GPG Agent: Starting agent..."
     gpg-connect-agent --quiet /bye &>/dev/null
     if ! pgrep -x "gpg-agent" > /dev/null; then
         eval "$(gpg-agent --daemon --enable-ssh-support --quiet)" > /dev/null
     fi
     
-    # Verify it started successfully
-    if pgrep -x "gpg-agent" > /dev/null && gpg-connect-agent --quiet /bye &>/dev/null; then
-        echo "🔐 GPG Agent: ✅ Started successfully"
-    else
-        echo "🔐 GPG Agent: ❌ Failed to start"
+    # Verify it started successfully (only show errors)
+    if ! pgrep -x "gpg-agent" > /dev/null || ! gpg-connect-agent --quiet /bye &>/dev/null; then
+        echo "❌ Failed to start GPG agent"
+        return 1
     fi
     
     # Set SSH_AUTH_SOCK to use gpg-agent for SSH if no ssh-agent
