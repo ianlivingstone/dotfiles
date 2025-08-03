@@ -1,7 +1,6 @@
-[user]
-    name = Ian Livingstone
-    email = ianrlivingstone@gmail.com
-    signingkey = FD158AB88FB56B899791DCD890E22B3922A06FA8
+# Include machine-specific configuration (name, email, signing keys, etc.)
+[include]
+    path = ~/.config/git/machine.config
 
 [color]
     diff = auto
