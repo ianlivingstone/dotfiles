@@ -134,13 +134,13 @@ check_dependencies() {
                     echo -e "  ${RED}•${NC} Tmux: brew install tmux"
                     ;;
                 "nvm")
-                    echo -e "  ${RED}•${NC} NVM: $SECURE_CURL -o- -sSfL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash"
+                    echo -e "  ${RED}•${NC} NVM: curl --proto '=https' --tlsv1.2 -o- -sSfL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash"
                     ;;
                 "gvm")
-                    echo -e "  ${RED}•${NC} GVM: bash < <($SECURE_CURL -sSfL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)"
+                    echo -e "  ${RED}•${NC} GVM: curl --proto '=https' --tlsv1.2 -sSfL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer | bash"
                     ;;
                 "cargo")
-                    echo -e "  ${RED}•${NC} Rust/Cargo: $SECURE_CURL -sSfL https://sh.rustup.rs | sh"
+                    echo -e "  ${RED}•${NC} Rust/Cargo: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
                     ;;
             esac
         done

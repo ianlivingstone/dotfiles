@@ -53,14 +53,14 @@ brew install stow starship luarocks ripgrep neovim tmux
 
 **Development Managers:**
 ```bash
-# Node.js version manager
-curl -o- --proto '=https' --tlsv1.2 -sSfL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+# Node.js version manager (NVM)
+curl --proto '=https' --tlsv1.2 -o- -sSfL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 
-# Go version manager  
-bash < <(curl --proto '=https' --tlsv1.2 -sSfL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+# Go version manager (GVM) 
+curl --proto '=https' --tlsv1.2 -sSfL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer | bash
 
 # Rust toolchain
-curl --proto '=https' --tlsv1.2 -sSfL https://sh.rustup.rs | sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 ## 🛠️ Management Commands
