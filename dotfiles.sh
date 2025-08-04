@@ -583,20 +583,24 @@ update_environment() {
     if [[ -f "$DOTFILES_DIR/shell/gvm.config" ]]; then
         source "$DOTFILES_DIR/shell/gvm.config"
         
-        # Check if GVM binary is available (use the actual binary, not shell function)
-        if [[ -x "$HOME/.gvm/bin/gvm" ]]; then
+        # Check if GVM is available and set up environment
+        if [[ -s "$HOME/.gvm/scripts/gvm" ]]; then
+            # Set up GVM environment variables first
+            export GVM_ROOT="$HOME/.gvm"
+            
             echo -e "${BLUE}📦 Installing Go $GO_VERSION...${NC}"
-            if "$HOME/.gvm/bin/gvm" install "$GO_VERSION" 2>/dev/null || "$HOME/.gvm/bin/gvm" list | grep -q "$GO_VERSION"; then
+            # Use the binary directly with proper environment
+            if GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" install "$GO_VERSION" 2>/dev/null || GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" list | grep -q "$GO_VERSION"; then
                 # Check if version is already the default
-                if "$HOME/.gvm/bin/gvm" list | grep -q "=> $GO_VERSION"; then
+                if GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" list | grep -q "=> $GO_VERSION"; then
                     echo -e "${GREEN}✅ Go $GO_VERSION is already active and set as default${NC}"
                 else
                     echo -e "${BLUE}🔧 Setting Go $GO_VERSION as default...${NC}"
-                    # Try to set as default, but don't fail if it doesn't work
-                    if "$HOME/.gvm/bin/gvm" use "$GO_VERSION" --default 2>/dev/null; then
+                    # Try to set as default using the shell function (source first)
+                    if (source "$HOME/.gvm/scripts/gvm" && gvm use "$GO_VERSION" --default) 2>/dev/null; then
                         echo -e "${GREEN}✅ Go environment updated!${NC}"
                     else
-                        echo -e "${YELLOW}⚠️  Go $GO_VERSION installed but couldn't set as default. You may need to run '$HOME/.gvm/bin/gvm use $GO_VERSION --default' manually.${NC}"
+                        echo -e "${YELLOW}⚠️  Go $GO_VERSION installed but couldn't set as default. Run 'gvm use $GO_VERSION --default' manually.${NC}"
                     fi
                 fi
             else
