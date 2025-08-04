@@ -583,31 +583,30 @@ update_environment() {
     if [[ -f "$DOTFILES_DIR/shell/gvm.config" ]]; then
         source "$DOTFILES_DIR/shell/gvm.config"
         
-        # Check if GVM is available and set up environment
+        # Check if GVM is available
         if [[ -s "$HOME/.gvm/scripts/gvm" ]]; then
-            # Set up GVM environment variables first
-            export GVM_ROOT="$HOME/.gvm"
+            # Source GVM once at the beginning to set up all functions and environment
+            source "$HOME/.gvm/scripts/gvm"
             
             echo -e "${BLUE}📦 Installing Go $GO_VERSION...${NC}"
-            # Use the binary directly with proper environment, install pre-compiled binary
-            if GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" install "$GO_VERSION" --binary 2>/dev/null || GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" list | grep -q "$GO_VERSION"; then
+            if gvm install "$GO_VERSION" --binary || gvm list | grep -q "$GO_VERSION"; then
                 # Check if version is already the default
-                if GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" list | grep -q "=> $GO_VERSION"; then
+                if gvm list | grep -q "=> $GO_VERSION"; then
                     echo -e "${GREEN}✅ Go $GO_VERSION is already active and set as default${NC}"
                 else
                     echo -e "${BLUE}🔧 Setting Go $GO_VERSION as default...${NC}"
-                    # Try to set as default using the shell function (source first)
-                    if (source "$HOME/.gvm/scripts/gvm" && gvm use "$GO_VERSION" --default) 2>/dev/null; then
+                    if gvm use "$GO_VERSION" --default; then
                         echo -e "${GREEN}✅ Go environment updated!${NC}"
                     else
-                        echo -e "${YELLOW}⚠️  Go $GO_VERSION installed but couldn't set as default. Run 'gvm use $GO_VERSION --default' manually.${NC}"
+                        echo -e "${RED}❌ Failed to set Go $GO_VERSION as default${NC}"
+                        return 1
                     fi
                 fi
             else
                 echo -e "${RED}❌ Failed to install Go $GO_VERSION${NC}"
             fi
         else
-            echo -e "${RED}❌ GVM command not available. Please ensure GVM is properly installed and in PATH.${NC}"
+            echo -e "${RED}❌ GVM not found. Please install GVM first.${NC}"
         fi
     else
         echo -e "${YELLOW}⚠️  GVM config not found${NC}"
