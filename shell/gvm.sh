@@ -14,7 +14,8 @@ export GVM_ROOT="$HOME/.gvm"
 
 # Load GVM if it exists
 if [[ -s "$GVM_ROOT/scripts/gvm" ]]; then
-    source "$GVM_ROOT/scripts/gvm"
+    # Don't source the full GVM script during shell startup as it can be problematic
+    # Instead, just set up the environment if a default exists
     
     # Fast filesystem-based checks (no slow GVM commands)
     # Check if configured Go version is installed
@@ -23,20 +24,41 @@ if [[ -s "$GVM_ROOT/scripts/gvm" ]]; then
     fi
     
     # Check if default environment matches configured version
-    local current_default=$(grep "gvm_go_name" "$GVM_ROOT/environments/default" 2>/dev/null | cut -d'"' -f2 || echo "none")
-    if [[ "$current_default" != "$GO_VERSION" ]]; then
+    local current_default=""
+    if [[ -f "$GVM_ROOT/environments/default" ]]; then
+        current_default=$(grep "gvm_go_name" "$GVM_ROOT/environments/default" 2>/dev/null | cut -d'"' -f2 || echo "")
+    fi
+    
+    if [[ -z "$current_default" ]]; then
+        show_warning "No default Go version set, expected $GO_VERSION"
+    elif [[ "$current_default" != "$GO_VERSION" ]]; then
         show_warning "Default Go version is $current_default, expected $GO_VERSION"
     fi
     
-    # Use the configured version and ensure it's in PATH
+    # Setup Go environment if version is installed
     if [[ -d "$GVM_ROOT/gos/$GO_VERSION" ]]; then
-        gvm use "$GO_VERSION" --default > /dev/null 2>&1 || true
+        # Only use gvm use if the current default doesn't match our target
+        if [[ "$current_default" != "$GO_VERSION" ]]; then
+            # Use gvm use to set the version (only if GVM functions are available)
+            if declare -f gvm >/dev/null 2>&1; then
+                gvm use "$GO_VERSION" --default >/dev/null 2>&1 || {
+                    echo "⚠️  Failed to set Go $GO_VERSION as default via gvm use"
+                }
+            fi
+        fi
         
-        # Ensure the specific version's bin directory is in PATH
+        # Always source the default environment to ensure variables are set
+        if [[ -f "$GVM_ROOT/environments/default" ]]; then
+            source "$GVM_ROOT/environments/default"
+        fi
+        
+        # Ensure Go paths are in PATH
         add_to_path "$GVM_ROOT/gos/$GO_VERSION/bin"
-        
-        # Also ensure pkgset bin is in PATH for installed packages
         add_to_path "$GVM_ROOT/pkgsets/$GO_VERSION/global/bin"
+        
+        # Set Go environment variables as fallback
+        export GOROOT="${GOROOT:-$GVM_ROOT/gos/$GO_VERSION}"
+        export GOPATH="${GOPATH:-$GVM_ROOT/pkgsets/$GO_VERSION/global}"
     fi
     
 elif [[ -d "$HOME/.gvm" ]]; then
@@ -44,5 +66,5 @@ elif [[ -d "$HOME/.gvm" ]]; then
     echo "⚠️  GVM directory found but gvm script is missing. Please reinstall GVM."
 else
     # GVM not installed
-    echo "❌ GVM not found. Install with: curl --proto '=https' --tlsv1.2 -sSfL https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer | bash"
+    show_warning "GVM not installed. Install GVM first, then run: dotfiles update"
 fi

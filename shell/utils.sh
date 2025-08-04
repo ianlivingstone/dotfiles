@@ -85,8 +85,21 @@ install_npm_globals() {
         fi
         
         if [[ -n "$packages" ]]; then
-            echo "  → Installing: $packages"
-            npm install -g $packages
+            # Check which packages need installation/update
+            local packages_to_install=()
+            
+            for package in $packages; do
+                if ! npm list -g "$package" >/dev/null 2>&1; then
+                    packages_to_install+=("$package")
+                fi
+            done
+            
+            if [[ ${#packages_to_install[@]} -gt 0 ]]; then
+                echo "  → Installing missing packages: ${packages_to_install[*]}"
+                npm install -g "${packages_to_install[@]}"
+            else
+                echo "  → All global packages already installed"
+            fi
         else
             echo "⚠️  No packages found in dependencies"
         fi
