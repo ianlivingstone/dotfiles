@@ -589,8 +589,8 @@ update_environment() {
             export GVM_ROOT="$HOME/.gvm"
             
             echo -e "${BLUE}📦 Installing Go $GO_VERSION...${NC}"
-            # Use the binary directly with proper environment
-            if GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" install "$GO_VERSION" 2>/dev/null || GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" list | grep -q "$GO_VERSION"; then
+            # Use the binary directly with proper environment, install pre-compiled binary
+            if GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" install "$GO_VERSION" --binary 2>/dev/null || GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" list | grep -q "$GO_VERSION"; then
                 # Check if version is already the default
                 if GVM_ROOT="$HOME/.gvm" "$HOME/.gvm/bin/gvm" list | grep -q "=> $GO_VERSION"; then
                     echo -e "${GREEN}✅ Go $GO_VERSION is already active and set as default${NC}"
