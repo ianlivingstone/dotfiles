@@ -14,8 +14,10 @@ export GVM_ROOT="$HOME/.gvm"
 
 # Load GVM if it exists
 if [[ -s "$GVM_ROOT/scripts/gvm" ]]; then
-    # Don't source the full GVM script during shell startup as it can be problematic
-    # Instead, just set up the environment if a default exists
+    # Source GVM to make gvm command available in shell
+    source "$GVM_ROOT/scripts/gvm" 2>/dev/null || {
+        echo "⚠️  Failed to source GVM scripts, but continuing..."
+    }
     
     # Fast filesystem-based checks (no slow GVM commands)
     # Check if configured Go version is installed
