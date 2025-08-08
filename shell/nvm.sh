@@ -12,42 +12,48 @@ load_config "$MODULE_DIR/nvm.config" "NODE_VERSION" "v24.1.0"
 # Setup NVM directory
 export NVM_DIR="$HOME/.nvm"
 
-# Load NVM if it exists
-if [[ -s "$NVM_DIR/nvm.sh" ]]; then
-    source "$NVM_DIR/nvm.sh"
-    
-    # Load bash completion
-    if [[ -s "$NVM_DIR/bash_completion" ]]; then
-        source "$NVM_DIR/bash_completion"
+# Load NVM lazily - only when first needed
+load_nvm() {
+    # Check if NVM already loaded
+    if [[ "$DOTFILES_NVM_LOADED" == "1" ]]; then
+        return 0
     fi
     
-    # Fast filesystem-based checks (no slow NVM commands)
+    if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+        source "$NVM_DIR/nvm.sh"
+        
+        # Load bash completion
+        if [[ -s "$NVM_DIR/bash_completion" ]]; then
+            source "$NVM_DIR/bash_completion"
+        fi
+        
+        export DOTFILES_NVM_LOADED=1
+        return 0
+    fi
+    return 1
+}
+
+# Check if NVM exists and set up lazy loading
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+    # Create wrapper functions for NVM commands
+    nvm() { load_nvm && command nvm "$@"; }
+    node() { load_nvm && command node "$@"; }
+    npm() { load_nvm && command npm "$@"; }
+    npx() { load_nvm && command npx "$@"; }
+    
+    # Fast filesystem-based checks (no slow NVM commands during startup)
     # Check if configured Node version is installed
     if [[ ! -d "$NVM_DIR/versions/node/$NODE_VERSION" ]]; then
         show_warning "Node.js $NODE_VERSION not installed"
+    else
+        # Ensure the specific version's bin directory is in PATH for immediate access
+        add_to_path "$NVM_DIR/versions/node/$NODE_VERSION/bin"
     fi
     
     # Check if default alias matches configured version
     local current_default=$(cat "$NVM_DIR/alias/default" 2>/dev/null || echo "none")
     if [[ "$current_default" != "$NODE_VERSION" ]]; then
         show_warning "Default Node.js version is $current_default, expected $NODE_VERSION"
-    fi
-    
-    # Use the configured version and ensure it's in PATH
-    if [[ -d "$NVM_DIR/versions/node/$NODE_VERSION" ]]; then
-        nvm use "$NODE_VERSION" > /dev/null 2>&1 || true
-        
-        # Ensure the specific version's bin directory is in PATH
-        add_to_path "$NVM_DIR/versions/node/$NODE_VERSION/bin"
-        
-        # Check if global packages need to be installed (only during verbose/update mode)  
-        if [[ "$DOTFILES_UPDATE_MODE" == "1" ]]; then
-            echo "🔍 Checking global npm packages..."
-            local npm_globals_dir="$(dirname "$MODULE_DIR")/npm-globals"
-            if [[ -f "$npm_globals_dir/package.json" ]]; then
-                install_npm_globals "$npm_globals_dir/package.json"
-            fi
-        fi
     fi
     
 elif [[ -d "$HOME/.nvm" ]]; then

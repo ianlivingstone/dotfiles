@@ -73,8 +73,13 @@ validate_gpg_keys() {
     return 0
 }
 
-# Main security validation function
+# Main security validation function with caching
 validate_key_security() {
+    # Check if key security already validated in this shell session
+    if [[ "$DOTFILES_KEY_SECURITY_VALIDATED" == "1" ]]; then
+        return 0
+    fi
+    
     if ! validate_ssh_keys; then
         return 1
     fi
@@ -83,5 +88,7 @@ validate_key_security() {
         return 1
     fi
     
+    # Cache successful key security validation for subshells
+    export DOTFILES_KEY_SECURITY_VALIDATED=1
     return 0
 }

@@ -7,16 +7,18 @@ set -e
 # Get the directory of this script
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# List of packages to manage with stow
-# Note: npm-globals is intentionally excluded - it's a config directory, not stowed
-PACKAGES=(
-    "shell"
-    "git"
-    "ssh"
-    "tmux"
-    "misc"
-    "nvim"
-)
+# XDG Base Directory - use same logic as shell config
+XDG_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+# Read packages from config file
+PACKAGES=()
+while IFS= read -r line || [[ -n "$line" ]]; do
+    # Skip empty lines and comments
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    # Expand variables in the line
+    line=$(eval echo "$line")
+    PACKAGES+=("$line")
+done < "$DOTFILES_DIR/packages.config"
 
 # Colors for output
 RED='\033[0;31m'
@@ -415,10 +417,22 @@ install_dotfiles() {
     
     # Use stow to link each package directory
     echo -e "${YELLOW}🔗 Stowing all dotfiles...${NC}"
-    for package in "${PACKAGES[@]}"; do
+    for entry in "${PACKAGES[@]}"; do
+        # Parse package:target format
+        if [[ "$entry" == *":"* ]]; then
+            package="${entry%:*}"
+            target="${entry#*:}"
+            # Expand variables in target path
+            target=$(eval echo "$target")
+        else
+            package="$entry"
+            target="$HOME"
+        fi
+        
         if [ -d "$package" ]; then
-            echo "   Stowing $package..."
-            stow --restow --target="$HOME" "$package"
+            echo "   Stowing $package to $target..."
+            mkdir -p "$target"
+            stow --restow --target="$target" "$package"
         fi
     done
     
@@ -494,10 +508,21 @@ uninstall_dotfiles() {
     
     # Unstow all packages 
     echo -e "${YELLOW}🔗 Unstowing all dotfiles...${NC}"
-    for package in "${PACKAGES[@]}"; do
+    for entry in "${PACKAGES[@]}"; do
+        # Parse package:target format
+        if [[ "$entry" == *":"* ]]; then
+            package="${entry%:*}"
+            target="${entry#*:}"
+            # Expand variables in target path
+            target=$(eval echo "$target")
+        else
+            package="$entry"
+            target="$HOME"
+        fi
+        
         if [ -d "$package" ]; then
-            echo "   Unstowing $package..."
-            stow --delete --target="$HOME" "$package" 2>/dev/null || true
+            echo "   Unstowing $package from $target..."
+            stow --delete --target="$target" "$package" 2>/dev/null || true
         fi
     done
     

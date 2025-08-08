@@ -1,17 +1,10 @@
 # Modular ZSH Configuration
 # Load shell modules in the correct order
 
-# Get the directory containing the actual shell modules (handle symlinks)
-ZSHRC_PATH="${(%):-%N}"
-if [[ -L "$ZSHRC_PATH" ]]; then
-    ZSHRC_TARGET="$(readlink "$ZSHRC_PATH")"
-    if [[ "$ZSHRC_TARGET" != /* ]]; then
-        ZSHRC_PATH="$(cd "$(dirname "$ZSHRC_PATH")" && pwd)/$ZSHRC_TARGET"
-    else
-        ZSHRC_PATH="$ZSHRC_TARGET"
-    fi
-fi
-SHELL_DIR="$(cd "$(dirname "$ZSHRC_PATH")" && pwd)"
+# Get the directory containing the actual shell modules
+# The shell scripts are in the shell/ directory, not the zsh/ directory
+DOTFILES_DIR="/Users/ian/code/src/github.com/ianlivingstone/dotfiles"
+SHELL_DIR="$DOTFILES_DIR/shell"
 
 # Load utility functions
 source "$SHELL_DIR/utils.sh"

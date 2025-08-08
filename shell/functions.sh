@@ -1,5 +1,47 @@
 # Utility functions
 
+# Generic stow-based status checker
+check_package_status() {
+    local entry="$1"
+    local dotfiles_dir="$2"
+    
+    # Parse package:target format (same logic as dotfiles.sh)
+    local package target
+    if [[ "$entry" == *":"* ]]; then
+        package="${entry%:*}"
+        target="${entry#*:}"
+        # Expand variables in target path
+        target=$(eval echo "$target")
+    else
+        package="$entry"
+        target="$HOME"
+    fi
+    
+    # Skip if package directory doesn't exist
+    if [[ ! -d "$dotfiles_dir/$package" ]]; then
+        echo "   ❌ $package → package directory not found"
+        return 1
+    fi
+    
+    # Use stow to check if package is properly stowed
+    local stow_output exit_code
+    cd "$dotfiles_dir" || return 1
+    stow_output=$(stow --no --verbose --restow --target="$target" "$package" 2>&1)
+    exit_code=$?
+    
+    # Determine status based on stow output and exit code
+    if [[ $exit_code -eq 0 ]]; then
+        if [[ -z "$stow_output" || "$stow_output" =~ "LINK: .+ \(reverts previous action\)" ]]; then
+            echo "   ✅ $package → properly stowed to $target"
+        else
+            echo "   ⚠️  $package → would make changes: $(echo "$stow_output" | head -1)"
+        fi
+    else
+        local error_summary=$(echo "$stow_output" | head -1 | sed 's/stow: //')
+        echo "   ❌ $package → error: $error_summary"
+    fi
+}
+
 # Comprehensive unified dotfiles status
 dotfiles_status() {
     echo "🏠 Dotfiles Status"
@@ -16,66 +58,20 @@ dotfiles_status() {
     
     # Installation Status
     echo "📁 Installation Status:"
-    local packages=("shell" "git" "ssh" "nvim" "tmux" "misc")
     
-    for package in "${packages[@]}"; do
-        case "$package" in
-            "shell")
-                if [[ -L ~/.zshrc ]]; then
-                    echo "   ✅ shell → ~/.zshrc (linked)"
-                elif [[ -f ~/.zshrc ]]; then
-                    echo "   ❌ shell → ~/.zshrc (file exists, not linked)"
-                else
-                    echo "   ❌ shell → ~/.zshrc (not found)"
-                fi
-                ;;
-            "git")
-                if [[ -L ~/.gitconfig ]]; then
-                    echo "   ✅ git → ~/.gitconfig (linked)"
-                elif [[ -f ~/.gitconfig ]]; then
-                    echo "   ❌ git → ~/.gitconfig (file exists, not linked)"
-                else
-                    echo "   ❌ git → ~/.gitconfig (not found)"
-                fi
-                ;;
-            "ssh")
-                if [[ -L ~/.ssh/config ]]; then
-                    echo "   ✅ ssh → ~/.ssh/config (linked)"
-                elif [[ -f ~/.ssh/config ]]; then
-                    echo "   ❌ ssh → ~/.ssh/config (file exists, not linked)"
-                else
-                    echo "   ❌ ssh → ~/.ssh/config (not found)"
-                fi
-                ;;
-            "nvim")
-                if [[ -L ~/.config/nvim ]]; then
-                    echo "   ✅ nvim → ~/.config/nvim/ (linked)"
-                elif [[ -d ~/.config/nvim ]]; then
-                    echo "   ❌ nvim → ~/.config/nvim/ (directory exists, not linked)"
-                else
-                    echo "   ❌ nvim → ~/.config/nvim/ (not found)"
-                fi
-                ;;
-            "tmux")
-                if [[ -L ~/.tmux.conf ]]; then
-                    echo "   ✅ tmux → ~/.tmux.conf (linked)"
-                elif [[ -f ~/.tmux.conf ]]; then
-                    echo "   ❌ tmux → ~/.tmux.conf (file exists, not linked)"
-                else
-                    echo "   ❌ tmux → ~/.tmux.conf (not found)"
-                fi
-                ;;
-            "misc")
-                if [[ -L ~/.config/starship.toml ]]; then
-                    echo "   ✅ starship → ~/.config/starship.toml (linked)"
-                elif [[ -f ~/.config/starship.toml ]]; then
-                    echo "   ❌ starship → ~/.config/starship.toml (file exists, not linked)"
-                else
-                    echo "   ❌ starship → ~/.config/starship.toml (not found)"
-                fi
-                ;;
-        esac
-    done
+    # Load packages from config file and check each one using stow
+    local dotfiles_dir="$HOME/code/src/github.com/ianlivingstone/dotfiles"
+    local xdg_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+    
+    # Set XDG_CONFIG_DIR for use in package config expansion
+    export XDG_CONFIG_DIR="$xdg_config_dir"
+    
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Skip empty lines and comments
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        # Check this package using stow
+        check_package_status "$line" "$dotfiles_dir"
+    done < "$dotfiles_dir/packages.config"
     echo
     
     # Development Environment

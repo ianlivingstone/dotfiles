@@ -1,8 +1,14 @@
 # SSH and GPG agent management
 
 start_ssh_agent() {
+    # Check if SSH agent already started in this shell session
+    if [[ "$DOTFILES_SSH_AGENT_STARTED" == "1" ]]; then
+        return 0
+    fi
+    
     # Check if ssh-agent is already running and accessible
     if [[ -n "$SSH_AUTH_SOCK" ]] && ssh-add -l &>/dev/null; then
+        export DOTFILES_SSH_AGENT_STARTED=1
         return 0  # Agent is running and accessible
     fi
     
@@ -33,9 +39,17 @@ start_ssh_agent() {
             fi
         done
     fi
+    
+    # Cache that SSH agent has been started
+    export DOTFILES_SSH_AGENT_STARTED=1
 }
 
 start_gpg_agent() {
+    # Check if GPG agent already started in this shell session
+    if [[ "$DOTFILES_GPG_AGENT_STARTED" == "1" ]]; then
+        return 0
+    fi
+    
     # Set GPG TTY for proper operation
     export GPG_TTY=$(tty)
     
@@ -52,6 +66,7 @@ start_gpg_agent() {
     
     # Check if gpg-agent is running and responsive
     if pgrep -x "gpg-agent" > /dev/null && gpg-connect-agent --quiet /bye &>/dev/null; then
+        export DOTFILES_GPG_AGENT_STARTED=1
         return 0  # Agent is running and responsive
     fi
     
@@ -71,6 +86,9 @@ start_gpg_agent() {
     if [[ -z "$SSH_AUTH_SOCK" ]]; then
         export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
     fi
+    
+    # Cache that GPG agent has been started
+    export DOTFILES_GPG_AGENT_STARTED=1
 }
 
 # Start agents
