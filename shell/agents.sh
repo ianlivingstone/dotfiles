@@ -1,5 +1,9 @@
 # SSH and GPG agent management
 
+# Source shared utilities
+SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"
+source "$SHELL_DIR/utils.sh"
+
 start_ssh_agent() {
     # Check if SSH agent already started in this shell session
     if [[ "$DOTFILES_SSH_AGENT_STARTED" == "1" ]]; then
@@ -29,7 +33,7 @@ start_ssh_agent() {
     source "$agent_env" > /dev/null
     
     # Load SSH keys from machine-specific config if available
-    local xdg_config="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local xdg_config="$(get_xdg_config_dir)"
     if [[ -f "$xdg_config/ssh/machine.config" ]]; then
         # Extract IdentityFile paths and add them (keys already validated by security.sh)
         grep "IdentityFile" "$xdg_config/ssh/machine.config" | while read -r line; do
@@ -54,7 +58,7 @@ start_gpg_agent() {
     export GPG_TTY=$(tty)
     
     # Set up machine-specific GPG configuration
-    local xdg_config="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local xdg_config="$(get_xdg_config_dir)"
     if [[ -f "$xdg_config/gpg/machine.config" ]]; then
         # Create symlink to machine-specific GPG config if it doesn't exist
         local gpg_home="${GNUPGHOME:-$HOME/.gnupg}"

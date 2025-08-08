@@ -137,11 +137,99 @@ This dotfiles system uses a **layered configuration approach**:
 
 For detailed information about the design principles and architecture decisions, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## 🤝 Customization
+## 🤝 Customization & Package Management
 
-Fork this repository and modify to your needs! The modular package structure makes it easy to:
-- Add new tools by creating new package directories
-- Remove tools by excluding them from the `PACKAGES` array in `dotfiles.sh`
-- Customize existing configurations by editing the files in each package
+### 📦 Adding New Packages
+
+To add a new package (e.g., `vscode`):
+
+1. **Create package directory**:
+   ```bash
+   mkdir vscode
+   ```
+
+2. **Add configuration files**:
+   ```bash
+   # For files that go to ~/
+   echo "config content" > vscode/settings.json
+   
+   # For files that go to ~/.config/vscode/
+   mkdir -p vscode/.config/vscode
+   echo "config content" > vscode/.config/vscode/settings.json
+   ```
+
+3. **Add to packages.config**:
+   ```bash
+   # Add at the end of packages.config
+   echo "vscode" >> packages.config
+   
+   # Or for custom target location:
+   echo "vscode:$XDG_CONFIG_DIR/vscode" >> packages.config
+   ```
+
+4. **Test installation**:
+   ```bash
+   ./dotfiles.sh status    # Should show new package
+   ./dotfiles.sh reinstall # Install new package
+   ```
+
+### 🗑️ Removing Packages
+
+To remove a package (e.g., `tmux`):
+
+1. **Remove from packages.config**:
+   ```bash
+   # Edit packages.config and delete the line containing "tmux"
+   vim packages.config
+   ```
+
+2. **Uninstall and reinstall**:
+   ```bash
+   ./dotfiles.sh reinstall  # Removes old packages, installs current ones
+   ```
+
+3. **Optionally delete package directory**:
+   ```bash
+   rm -rf tmux/  # Only if you don't want it available
+   ```
+
+### 🎯 Package Targets
+
+The `packages.config` format supports custom targets:
+
+```bash
+# Default target (~/):
+git
+ssh
+tmux
+
+# Custom targets:
+nvim:$XDG_CONFIG_DIR/nvim           # Goes to ~/.config/nvim/
+gnupg:$HOME/.gnupg                  # Goes to ~/.gnupg/
+myapp:$HOME/.local/share/myapp      # Goes to ~/.local/share/myapp/
+```
+
+**Variables available**:
+- `$HOME` - Your home directory
+- `$XDG_CONFIG_DIR` - Usually `~/.config`
+- Any other environment variables
+
+### 🔧 Status Checking
+
+The status command automatically validates all packages using Stow's own logic:
+```bash
+./dotfiles.sh status
+# ✅ git → properly stowed to /Users/ian
+# ❌ nvim → would make changes: LINK: init.lua
+# ⚠️  missing → package directory not found
+```
+
+This ensures the status reflects exactly what Stow would do, with no guesswork.
+
+**Key Benefits**:
+- **Single source of truth**: All packages defined in `packages.config`
+- **Stow-validated**: Status uses Stow's own validation logic  
+- **Flexible targets**: Each package can go to a different location
+- **Zero duplication**: Add once in config, works everywhere
 
 The separation between shared and machine-specific configuration means you can safely share your fork while keeping personal data private.

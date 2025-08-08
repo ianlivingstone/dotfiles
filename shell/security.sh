@@ -1,7 +1,11 @@
 # Security validation for SSH and GPG keys
 
+# Source shared utilities
+SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"
+source "$SHELL_DIR/utils.sh"
+
 validate_ssh_keys() {
-    local xdg_config="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local xdg_config="$(get_xdg_config_dir)"
     if [[ ! -f "$xdg_config/ssh/machine.config" ]]; then
         return 0  # No SSH config to validate
     fi
@@ -37,7 +41,7 @@ validate_gpg_keys() {
     fi
     
     # Get the selected GPG key from machine config
-    local xdg_config="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local xdg_config="$(get_xdg_config_dir)"
     local selected_key=""
     
     if [[ -f "$xdg_config/gpg/machine.config" ]]; then

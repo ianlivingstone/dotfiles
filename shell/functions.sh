@@ -1,5 +1,9 @@
 # Utility functions
 
+# Source shared utilities
+SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"
+source "$SHELL_DIR/utils.sh"
+
 # Generic stow-based status checker
 check_package_status() {
     local entry="$1"
@@ -31,10 +35,16 @@ check_package_status() {
     
     # Determine status based on stow output and exit code
     if [[ $exit_code -eq 0 ]]; then
-        if [[ -z "$stow_output" || "$stow_output" =~ "LINK: .+ \(reverts previous action\)" ]]; then
+        if [[ -z "$stow_output" ]]; then
+            # No output means already properly stowed
+            echo "   ✅ $package → properly stowed to $target"
+        elif [[ "$stow_output" =~ "reverts previous action" ]]; then
+            # "reverts previous action" means stow is fixing/updating existing links
             echo "   ✅ $package → properly stowed to $target"
         else
-            echo "   ⚠️  $package → would make changes: $(echo "$stow_output" | head -1)"
+            # Other changes needed
+            local first_line=$(echo "$stow_output" | grep -E "^(LINK|UNLINK|MKDIR)" | head -1)
+            echo "   ⚠️  $package → would make changes: $first_line"
         fi
     else
         local error_summary=$(echo "$stow_output" | head -1 | sed 's/stow: //')
@@ -61,7 +71,7 @@ dotfiles_status() {
     
     # Load packages from config file and check each one using stow
     local dotfiles_dir="$HOME/code/src/github.com/ianlivingstone/dotfiles"
-    local xdg_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local xdg_config_dir="$(get_xdg_config_dir)"
     
     # Set XDG_CONFIG_DIR for use in package config expansion
     export XDG_CONFIG_DIR="$xdg_config_dir"
@@ -91,15 +101,25 @@ dotfiles_status() {
     fi
     
     # Programming Languages
-    # Check if NVM is available (should be loaded by languages.sh module)
+    # Check if NVM is available - load it first if installed
+    local nvm_loaded=false
     if command -v nvm &>/dev/null; then
+        nvm_loaded=true
+    elif [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+        # Load NVM to check its status
+        export NVM_DIR="$HOME/.nvm"
+        source "$NVM_DIR/nvm.sh" &>/dev/null
+        nvm_loaded=true
+    fi
+    
+    if [[ "$nvm_loaded" == "true" ]]; then
         local node_version=$(node --version 2>/dev/null || echo "none")
         local nvm_version=$(nvm --version 2>/dev/null || echo "unknown")
         local default_version=$(cat "$NVM_DIR/alias/default" 2>/dev/null || echo "none")
         echo "   ✅ Node.js: $node_version (via NVM $nvm_version)"
         echo "       └── Default: $default_version"
     else
-        echo "   ❌ NVM: Not loaded"
+        echo "   ❌ NVM: Not installed"
     fi
     
     # Check if GVM is available (should be loaded by languages.sh module)
@@ -145,7 +165,7 @@ dotfiles_status() {
     
     # Security & Agents
     echo "🔐 Security & Agents:"
-    local xdg_config="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local xdg_config="$(get_xdg_config_dir)"
     
     # SSH Keys Summary
     if [[ -f "$xdg_config/ssh/machine.config" ]]; then
@@ -172,9 +192,16 @@ dotfiles_status() {
     
     # GPG Key Summary
     if command -v gpg &> /dev/null; then
-        local selected_key=""
-        if [[ -f "$xdg_config/gpg/machine.config" ]]; then
-            selected_key=$(grep "^default-key" "$xdg_config/gpg/machine.config" 2>/dev/null | awk '{print $2}')
+        # Get the default key directly from GPG
+        local selected_key=$(gpg --list-secret-keys --with-colons 2>/dev/null | grep "^sec:" | head -1 | cut -d: -f5)
+        
+        # If no secret keys, try to get default key from config as fallback
+        if [[ -z "$selected_key" ]]; then
+            if [[ -f "$xdg_config/gpg/machine.config" ]]; then
+                selected_key=$(grep "^default-key" "$xdg_config/gpg/machine.config" 2>/dev/null | awk '{print $2}')
+            elif [[ -f "$HOME/.gnupg/gpg.conf" ]]; then
+                selected_key=$(grep "^default-key" "$HOME/.gnupg/gpg.conf" 2>/dev/null | awk '{print $2}')
+            fi
         fi
         
         if [[ -n "$selected_key" ]]; then

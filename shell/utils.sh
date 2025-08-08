@@ -1,5 +1,11 @@
 # Shared utility functions for dotfiles shell modules
 
+# Get XDG config directory with consistent fallback
+# Usage: get_xdg_config_dir
+get_xdg_config_dir() {
+    echo "${XDG_CONFIG_HOME:-$HOME/.config}"
+}
+
 # Get the directory containing shell modules, resolving symlinks properly
 # Usage: get_shell_dir [script_path]
 # If script_path is not provided, uses the calling script's path

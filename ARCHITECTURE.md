@@ -77,20 +77,171 @@ Host *
     IdentitiesOnly yes
 ```
 
-## Package Structure
+## Package Management System
 
-Each directory in the repository represents a "package" that can be installed via GNU Stow:
+### Core Architecture
+
+The dotfiles system uses a **configuration-driven package approach** with these key components:
+
+1. **`packages.config`** - Single source of truth for all packages
+2. **Package directories** - Self-contained tool configurations  
+3. **GNU Stow** - Symlink management for installation
+4. **Stow-based validation** - Status checking using Stow's own logic
+
+### Package Configuration Format
 
 ```bash
-PACKAGES=(
-    "shell"     # Zsh configuration and aliases
-    "git"       # Git configuration with includes  
-    "ssh"       # SSH configuration with includes
-    "tmux"      # Terminal multiplexer setup
-    "misc"      # Starship prompt, dircolors
-    "nvim"      # Neovim editor configuration (modular)
-)
+# packages.config
+# Format: package[:target]
+# Variables are expanded during installation
+
+zsh                                    # Default target: ~/
+git                                    # Default target: ~/
+ssh                                    # Default target: ~/
+tmux                                   # Default target: ~/
+misc                                   # Default target: ~/
+nvim:$XDG_CONFIG_DIR/nvim             # Custom target: ~/.config/nvim/
+gnupg:$HOME/.gnupg                    # Custom target: ~/.gnupg/
 ```
+
+**Key Features**:
+- **Single source of truth**: All packages defined once
+- **Variable expansion**: Supports `$HOME`, `$XDG_CONFIG_DIR`, etc.
+- **Flexible targets**: Each package can go anywhere
+- **Comment support**: Lines starting with `#` are ignored
+
+### Package Directory Structure
+
+Each package directory contains the files to be linked:
+
+```bash
+# For default target (~/):
+git/
+├── .gitconfig                        # → ~/.gitconfig
+└── .gitignore_global                 # → ~/.gitignore_global
+
+# For custom targets:
+nvim/                                 # Target: ~/.config/nvim/
+├── init.lua                          # → ~/.config/nvim/init.lua  
+├── lazy-lock.json                    # → ~/.config/nvim/lazy-lock.json
+└── lua/                              # → ~/.config/nvim/lua/
+
+gnupg/                                # Target: ~/.gnupg/
+├── gpg.conf                          # → ~/.gnupg/gpg.conf
+└── gpg-agent.conf                    # → ~/.gnupg/gpg-agent.conf
+```
+
+### Adding New Packages
+
+**1. Create package directory and files**:
+```bash
+mkdir myapp
+echo "config content" > myapp/config.toml
+
+# For files going to ~/.config/myapp/:
+mkdir -p myapp-config
+echo "config content" > myapp-config/settings.json
+```
+
+**2. Add to packages.config**:
+```bash
+# Default target (~/):
+echo "myapp" >> packages.config
+
+# Custom target:  
+echo "myapp-config:\$XDG_CONFIG_DIR/myapp" >> packages.config
+```
+
+**3. Test and install**:
+```bash
+./dotfiles.sh status     # Should show new packages  
+./dotfiles.sh reinstall  # Install new packages
+```
+
+### Removing Packages
+
+**1. Remove from packages.config**:
+```bash
+# Edit packages.config and delete the package line
+vim packages.config
+```
+
+**2. Uninstall**:
+```bash
+./dotfiles.sh reinstall  # Removes old packages, installs remaining ones
+```
+
+**3. Optionally delete package directory**:
+```bash
+rm -rf myapp/  # Only if you don't want it available anymore
+```
+
+### Status Validation System
+
+The status system uses **Stow's own logic** for validation instead of duplicating assumptions:
+
+```bash
+check_package_status() {
+    local package="$1" target="$2"
+    
+    # Ask Stow: "What would you do if you were to restow this package?"
+    stow_output=$(stow --no --verbose --restow --target="$target" "$package" 2>&1)
+    exit_code=$?
+    
+    # Interpret Stow's response:
+    if [[ $exit_code -eq 0 && -z "$stow_output" ]]; then
+        echo "✅ $package → properly stowed to $target"
+    else
+        echo "❌ $package → needs attention: $stow_output"  
+    fi
+}
+```
+
+**Benefits of Stow-based validation**:
+- **No logic duplication**: Uses Stow's own understanding of linking
+- **Handles edge cases**: Stow knows about conflicts, existing files, etc.
+- **Self-healing hints**: Shows exactly what Stow would do to fix issues
+- **Works with any target**: Respects custom targets automatically
+
+### Package System Benefits
+
+**Before (hardcoded arrays)**:
+```bash
+# dotfiles.sh
+PACKAGES=("zsh" "git" "ssh" "tmux" "misc" "nvim")
+
+# functions.sh  
+packages=("shell" "git" "ssh" "nvim" "tmux" "misc")  # ❌ Out of sync!
+
+# Status checking
+case "$package" in
+    "nvim")
+        if [[ -L ~/.config/nvim ]]; then
+            echo "✅ linked"
+        elif [[ -d ~/.config/nvim ]]; then
+            echo "❌ directory exists"     # ❌ Assumes how Stow works
+        fi
+        ;;
+esac
+```
+
+**After (configuration-driven)**:
+```bash
+# packages.config (single source of truth)
+nvim:$XDG_CONFIG_DIR/nvim
+
+# Both dotfiles.sh and functions.sh read the same config
+while read -r line; do
+    check_package_status "$line" "$dotfiles_dir"  # ✅ Uses Stow's logic
+done < packages.config
+```
+
+**Key Improvements**:
+- ✅ **Single source of truth**: One config file drives everything
+- ✅ **No duplication**: Package list defined once, used everywhere  
+- ✅ **Stow validation**: Status uses Stow's actual logic, not assumptions
+- ✅ **Flexible targets**: Easy to add packages with custom locations
+- ✅ **Zero maintenance**: Add package once, works in install/status/uninstall
 
 ### Neovim Modular Architecture
 
