@@ -595,6 +595,25 @@ show_status() {
     export XDG_CONFIG_DIR="$(get_xdg_config_dir)"
     export SHELL_DIR="$DOTFILES_DIR/shell"
     
+    # Load NVM if not already available and cache the result
+    if [[ "$DOTFILES_NVM_LOADED" != "1" ]]; then
+        if command -v nvm &>/dev/null; then
+            export DOTFILES_NVM_LOADED=1
+        elif [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+            export NVM_DIR="$HOME/.nvm"
+            source "$NVM_DIR/nvm.sh" &>/dev/null
+            export DOTFILES_NVM_LOADED=1
+        fi
+    fi
+    
+    # Validate key security if not already done in this session
+    if [[ "$DOTFILES_KEY_SECURITY_VALIDATED" != "1" ]]; then
+        source "$DOTFILES_DIR/shell/security.sh"
+        if validate_key_security; then
+            export DOTFILES_KEY_SECURITY_VALIDATED=1
+        fi
+    fi
+    
     # Source the shell functions to get access to dotfiles_status
     source "$DOTFILES_DIR/shell/functions.sh"
     
