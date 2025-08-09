@@ -77,6 +77,8 @@ install_npm_globals() {
     # Use npm to install all dependencies globally
     # Create a temp directory and copy the package.json there
     local temp_dir=$(mktemp -d)
+    chmod 700 "$temp_dir"
+    trap "rm -rf '$temp_dir'" EXIT INT TERM
     cp "$package_json" "$temp_dir/package.json"
     
     # Change to temp directory and install all dependencies globally

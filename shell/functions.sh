@@ -14,8 +14,10 @@ check_package_status() {
     if [[ "$entry" == *":"* ]]; then
         package="${entry%:*}"
         target="${entry#*:}"
-        # Expand variables in target path
-        target=$(eval echo "$target")
+        # Safe variable expansion in target path
+        target="${target/#\~/$HOME}"
+        target="${target//\$HOME/$HOME}"
+        target="${target//\$XDG_CONFIG_DIR/$XDG_CONFIG_DIR}"
     else
         package="$entry"
         target="$HOME"
