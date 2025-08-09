@@ -1,4 +1,6 @@
-# Utility functions
+#!/usr/bin/env zsh
+# Utility functions and status reporting
+# SOURCED MODULE: Uses graceful error handling, never use set -e
 
 # Source shared utilities
 SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"

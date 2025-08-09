@@ -1,4 +1,6 @@
+#!/usr/bin/env zsh
 # NVM (Node Version Manager) setup and configuration
+# SOURCED MODULE: Uses graceful error handling, never use set -e
 
 # Load utility functions
 source "$(cd "$(dirname "${(%):-%N}")" && pwd)/utils.sh"

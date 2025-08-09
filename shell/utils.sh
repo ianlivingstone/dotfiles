@@ -1,4 +1,6 @@
+#!/usr/bin/env zsh
 # Shared utility functions for dotfiles shell modules
+# SOURCED MODULE: Uses graceful error handling, never use set -e
 
 # Get XDG config directory with consistent fallback
 # Usage: get_xdg_config_dir

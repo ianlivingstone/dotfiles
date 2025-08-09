@@ -1,4 +1,6 @@
+#!/usr/bin/env zsh
 # SSH and GPG agent management
+# SOURCED MODULE: Uses graceful error handling, never use set -e
 
 # Source shared utilities
 SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"
@@ -49,13 +51,15 @@ start_ssh_agent() {
 }
 
 start_gpg_agent() {
+    # Always update GPG_TTY (needed when switching terminals)
+    export GPG_TTY=$(tty)
+    
     # Check if GPG agent already started in this shell session
-    if [[ "$DOTFILES_GPG_AGENT_STARTED" == "1" ]]; then
+    if [[ "${DOTFILES_GPG_AGENT_STARTED:-}" == "1" ]]; then
+        # Update GPG agent with current TTY
+        gpg-connect-agent updatestartuptty /bye &>/dev/null || true
         return 0
     fi
-    
-    # Set GPG TTY for proper operation
-    export GPG_TTY=$(tty)
     
     # Set up machine-specific GPG configuration
     local xdg_config="$(get_xdg_config_dir)"

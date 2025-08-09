@@ -1,4 +1,6 @@
+#!/usr/bin/env zsh
 # Programming language environment setup
+# SOURCED MODULE: Uses graceful error handling, never use set -e
 
 # Note: SHELL_DIR is set by .zshrc before sourcing this file
 # It contains the path to the shell modules directory

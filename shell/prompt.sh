@@ -1,4 +1,6 @@
+#!/usr/bin/env zsh
 # Shell prompt and status configuration
+# SOURCED MODULE: Uses graceful error handling, never use set -e
 
 # Shell status function
 shell_status() {

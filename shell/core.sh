@@ -1,4 +1,6 @@
+#!/usr/bin/env zsh
 # Core shell configuration - basic settings and PATH setup
+# SOURCED MODULE: Uses graceful error handling, never use set -e
 
 # XDG Base Directory Specification
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"

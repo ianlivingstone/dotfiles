@@ -187,12 +187,13 @@ mkdir -p ~/.ssh/sockets && chmod 700 ~/.ssh/sockets
 ```bash
 #!/usr/bin/env zsh
 # Module description
+# SOURCED MODULE: Uses graceful error handling, never use set -e
 
 # Source shared utilities (ALWAYS first)
 SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"
 source "$SHELL_DIR/utils.sh"
 
-# Module logic here
+# Module logic here - use return (not exit) for error handling
 ```
 
 ### Loading Order Dependencies
@@ -378,6 +379,18 @@ secure_file_permissions() {
 # Add to SSH config: UseKeychain yes, AddKeysToAgent yes
 ssh-add --apple-load-keychain 2>/dev/null || true
 
+# ✅ Dynamic tool detection (avoid hardcoding paths)
+detect_best_pinentry() {
+    local pinentry_program=""
+    for program in pinentry-curses pinentry-tty pinentry; do
+        if command -v "$program" &>/dev/null; then
+            pinentry_program=$(command -v "$program")
+            break
+        fi
+    done
+    echo "${pinentry_program:-}"  # Return path or empty
+}
+
 # ✅ Enhanced SSH key validation
 validate_ssh_key_strength() {
     local key_path="$1"
@@ -433,7 +446,8 @@ secure_exec() {
 - [ ] **Variable quoting**: Always quote variables: `"$variable"`
 - [ ] **Error messages**: Don't expose sensitive paths or information
 - [ ] **Cleanup**: Clear actual secrets (passphrases, keys) - not public data
-- [ ] **Dependencies**: Check tools exist before using
+- [ ] **Dependencies**: Use `command -v` detection, never hardcode paths
+- [ ] **Portability**: Generate configs dynamically, avoid hardcoded system paths
 
 ## Critical Security Issues in Current Codebase
 

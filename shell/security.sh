@@ -1,4 +1,6 @@
+#!/usr/bin/env zsh
 # Security validation for SSH and GPG keys
+# SOURCED MODULE: Uses graceful error handling, never use set -e
 
 # Source shared utilities
 SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"
