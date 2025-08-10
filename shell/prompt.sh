@@ -33,6 +33,9 @@ eval "$(starship init zsh)"
 
 # Show status on new interactive shell
 if [[ $- == *i* ]]; then
+    # Run security check (warns about issues but doesn't auto-fix)
+    quick_security_check
+    
     shell_status
     echo "💡 Run 'dotfiles' to check your complete setup status"
 fi

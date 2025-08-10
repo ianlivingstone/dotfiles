@@ -173,13 +173,13 @@ dotfiles_status() {
     
     # SSH Keys Summary
     if [[ -f "$xdg_config/ssh/machine.config" ]]; then
-        local ssh_key_count=$(grep -c "IdentityFile" "$xdg_config/ssh/machine.config" 2>/dev/null || echo "0")
+        local ssh_key_count=$(grep -c "IdentityFile" "$xdg_config/ssh/machine.config" 2>/dev/null | tr -d '\n' || echo "0")
         local encrypted_count=0
         
         while IFS= read -r line; do
             local key_path=$(echo "$line" | awk '{print $2}' | sed "s|~|$HOME|")
             if [[ -f "$key_path" ]] && ! ssh-keygen -y -P "" -f "$key_path" &>/dev/null; then
-                ((encrypted_count++))
+                encrypted_count=$((encrypted_count + 1))
             fi
         done < <(grep "IdentityFile" "$xdg_config/ssh/machine.config" 2>/dev/null)
         
@@ -261,8 +261,168 @@ dotfiles_status() {
         echo "   ❌ GitHub SSH: Connection failed"
     fi
     
+    # Security permissions validation
+    validate_security_permissions
+    
     echo
     echo "💡 Run './dotfiles.sh help' for management commands"
+}
+
+# Security validation and auto-fix function
+# Usage: validate_security_permissions [--fix] [--quiet] [--startup]
+validate_security_permissions() {
+    local auto_fix=false
+    local quiet=false  
+    local startup_mode=false
+    local show_header=true
+    
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --fix) auto_fix=true; shift ;;
+            --quiet) quiet=true; show_header=false; shift ;;
+            --startup) startup_mode=true; quiet=true; show_header=false; shift ;;
+            *) shift ;;
+        esac
+    done
+    
+    local security_issues=()
+    local fixed_issues=()
+    local xdg_config="$(get_xdg_config_dir)"
+    
+    [[ "$show_header" == "true" ]] && echo "" && echo "🔒 Security Permissions:"
+    
+    # Define files that should be 600 (user read/write only)
+    local secure_files=(
+        "$xdg_config/git/machine.config"
+        "$xdg_config/ssh/machine.config" 
+        "$HOME/.gnupg/gpg.conf"
+        "$HOME/.gnupg/gpg-agent.conf"
+        "$HOME/.ssh/id_ed25519"
+        "$HOME/.ssh/id_rsa"
+    )
+    
+    # Define directories that should be 700 (user access only)
+    local secure_dirs=(
+        "$HOME/.gnupg"
+        "$HOME/.ssh"
+        "$xdg_config/ssh"
+        "$xdg_config/git" 
+        "$xdg_config/gpg"
+    )
+    
+    # Check and optionally fix file permissions
+    for file in "${secure_files[@]}"; do
+        if [[ -f "$file" ]]; then
+            local perms=$(stat -f %A "$file" 2>/dev/null || stat -c %a "$file" 2>/dev/null || echo "unknown")
+            if [[ "$perms" != "600" ]]; then
+                if [[ "$auto_fix" == "true" ]]; then
+                    if chmod 600 "$file" 2>/dev/null; then
+                        fixed_issues+=("$file ($perms → 600)")
+                    else
+                        security_issues+=("File $file has permissions $perms (should be 600)")
+                    fi
+                else
+                    security_issues+=("File $file has permissions $perms (should be 600)")
+                fi
+            fi
+        fi
+    done
+    
+    # Check and optionally fix directory permissions
+    for dir in "${secure_dirs[@]}"; do
+        if [[ -d "$dir" ]]; then
+            local perms=$(stat -f %A "$dir" 2>/dev/null || stat -c %a "$dir" 2>/dev/null || echo "unknown")
+            if [[ "$perms" != "700" ]] && [[ "$perms" != "755" ]]; then
+                if [[ "$auto_fix" == "true" ]]; then
+                    if chmod 700 "$dir" 2>/dev/null; then
+                        fixed_issues+=("$dir ($perms → 700)")
+                    else
+                        security_issues+=("Directory $dir has permissions $perms (should be 700)")
+                    fi
+                else
+                    security_issues+=("Directory $dir has permissions $perms (should be 700)")
+                fi
+            fi
+        fi
+    done
+    
+    # Check and optionally fix SSH key permissions specifically
+    for key in ~/.ssh/id_*; do
+        if [[ -f "$key" ]] && [[ "$key" != *.pub ]]; then
+            local perms=$(stat -f %A "$key" 2>/dev/null || stat -c %a "$key" 2>/dev/null || echo "unknown")
+            if [[ "$perms" != "600" ]]; then
+                if [[ "$auto_fix" == "true" ]]; then
+                    if chmod 600 "$key" 2>/dev/null; then
+                        fixed_issues+=("$key ($perms → 600)")
+                    else
+                        security_issues+=("SSH private key $key has permissions $perms (should be 600)")
+                    fi
+                else
+                    security_issues+=("SSH private key $key has permissions $perms (should be 600)")
+                fi
+            fi
+        fi
+    done
+    
+    # Check and fix all ~/.config subdirectories to be user-only accessible
+    if [[ -d "$HOME/.config" ]]; then
+        find "$HOME/.config" -type d -not -perm 700 2>/dev/null | while read -r config_dir; do
+            if [[ -n "$config_dir" ]]; then
+                local perms=$(stat -f %A "$config_dir" 2>/dev/null || stat -c %a "$config_dir" 2>/dev/null || echo "unknown")
+                if [[ "$auto_fix" == "true" ]]; then
+                    if chmod 700 "$config_dir" 2>/dev/null; then
+                        fixed_issues+=("$config_dir ($perms → 700)")
+                    else
+                        security_issues+=("Directory $config_dir has permissions $perms (should be 700)")
+                    fi
+                else
+                    security_issues+=("Directory $config_dir has permissions $perms (should be 700)")
+                fi
+            fi
+        done
+    fi
+    
+    # Output results based on mode
+    if [[ "$quiet" == "false" ]]; then
+        if [[ ${#fixed_issues[@]} -gt 0 ]]; then
+            echo "   ✅ Fixed ${#fixed_issues[@]} permission issues"
+            if [[ "$auto_fix" == "false" ]]; then
+                for issue in "${fixed_issues[@]}"; do
+                    echo "       • Fixed: $issue"
+                done
+            fi
+        fi
+        
+        if [[ ${#security_issues[@]} -eq 0 ]] && [[ ${#fixed_issues[@]} -eq 0 ]]; then
+            echo "   ✅ All security-sensitive files have proper permissions"
+        elif [[ ${#security_issues[@]} -gt 0 ]]; then
+            echo "   ⚠️  Security permission issues found:"
+            for issue in "${security_issues[@]}"; do
+                echo "       • $issue"
+            done
+            echo ""
+            echo "   💡 Fix with: fix_security_permissions or manually: chmod 600 <files> && chmod 700 <dirs>"
+        fi
+    elif [[ "$startup_mode" == "true" ]]; then
+        # Show critical security warnings on startup (but don't auto-fix)
+        if [[ ${#security_issues[@]} -gt 0 ]]; then
+            echo "⚠️  SECURITY WARNING: Found ${#security_issues[@]} permission issue(s) that need attention!"
+            echo "   Run 'fix_security_permissions' to fix, or 'dotfiles status' for details"
+        fi
+    fi
+}
+
+# Fix security permissions automatically (wrapper for unified function)
+fix_security_permissions() {
+    echo "🔒 Fixing security permissions..."
+    validate_security_permissions --fix
+}
+
+# Quick security check that runs on shell startup  
+# Warns about critical security issues but does NOT fix them automatically
+quick_security_check() {
+    validate_security_permissions --startup
 }
 
 # Simple alias to dotfiles.sh script (now handles caching internally)

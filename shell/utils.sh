@@ -2,6 +2,7 @@
 # Shared utility functions for dotfiles shell modules
 # SOURCED MODULE: Uses graceful error handling, never use set -e
 
+
 # Get XDG config directory with consistent fallback
 # Usage: get_xdg_config_dir
 get_xdg_config_dir() {
@@ -67,6 +68,14 @@ show_warning() {
 # Install global npm packages from package.json
 # Usage: install_npm_globals package_json_file
 install_npm_globals() {
+    # Temporarily disable strict mode for this function (using local scope)
+    local saved_errexit="" saved_nounset="" saved_pipefail=""
+    [[ $- == *e* ]] && saved_errexit="e"
+    [[ $- == *u* ]] && saved_nounset="u" 
+    [[ $- == *o* ]] && saved_pipefail="o pipefail"
+    set +euo pipefail
+    trap - ERR
+    
     local package_json="$1"
     
     if [[ ! -f "$package_json" ]]; then
@@ -87,18 +96,24 @@ install_npm_globals() {
     (
         cd "$temp_dir"
         # Extract package names and install them globally
+        local packages_array=()
         if command -v jq &>/dev/null; then
-            local packages=$(jq -r '.dependencies | keys[]' package.json 2>/dev/null | tr '\n' ' ')
+            # Use jq to extract package names into an array
+            while IFS= read -r package; do
+                [[ -n "$package" ]] && packages_array+=("$package")
+            done < <(jq -r '.dependencies | keys[]' package.json 2>/dev/null)
         else
             # Fallback parsing
-            local packages=$(grep -A 20 '"dependencies"' package.json | grep -o '"[^"]*"' | grep -v "dependencies\|latest" | tr -d '"' | tr '\n' ' ')
+            while IFS= read -r package; do
+                [[ -n "$package" ]] && packages_array+=("$package")
+            done < <(grep -A 20 '"dependencies"' package.json | grep -o '"[^"]*"' | grep -v "dependencies\|latest" | tr -d '"')
         fi
         
-        if [[ -n "$packages" ]]; then
+        if [[ ${#packages_array[@]} -gt 0 ]]; then
             # Check which packages need installation/update
             local packages_to_install=()
             
-            for package in $packages; do
+            for package in "${packages_array[@]}"; do
                 if ! npm list -g "$package" >/dev/null 2>&1; then
                     packages_to_install+=("$package")
                 fi
@@ -117,4 +132,10 @@ install_npm_globals() {
     
     # Clean up temp directory
     rm -rf "$temp_dir"
+    
+    # Restore original shell options
+    [[ -n "$saved_errexit" ]] && set -e
+    [[ -n "$saved_nounset" ]] && set -u
+    [[ -n "$saved_pipefail" ]] && set -o pipefail
+    trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
 }

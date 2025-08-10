@@ -187,7 +187,7 @@ detect_ssh_keys() {
     local ssh_keys=()
     for key in ~/.ssh/id_*; do
         # Check if file exists and is not a .pub file
-        if [[ -f "$key" && ! "$key" == *.pub ]]; then
+        if [ -f "$key" ] && [ "$key" = "${key%.pub}" ]; then
             ssh_keys+=("$key")
         fi
     done
@@ -200,8 +200,10 @@ detect_ssh_keys() {
     fi
     
     echo -e "${GREEN}Found SSH keys:${NC}"
-    for i in "${!ssh_keys[@]}"; do
-        echo -e "  ${GREEN}$((i+1)).${NC} ${ssh_keys[i]}"
+    local i=1
+    for key in "${ssh_keys[@]}"; do
+        echo -e "  ${GREEN}$i.${NC} $key"
+        ((i++))
     done
     
     echo ""
@@ -209,7 +211,9 @@ detect_ssh_keys() {
     echo "  - Enter numbers comma-separated (e.g., 1,3)"
     echo "  - Enter 'all' for all keys"
     echo "  - Enter 'none' to skip SSH key setup"
-    read -p "Selection: " selection
+    printf "Selection: "
+    local selection=""
+    read -r selection
     
     local selected_keys=()
     if [[ "$selection" == "all" ]]; then
@@ -217,11 +221,14 @@ detect_ssh_keys() {
     elif [[ "$selection" == "none" ]]; then
         return 1
     else
-        IFS=',' read -ra indices <<< "$selection"
-        for index in "${indices[@]}"; do
-            index=$(echo "$index" | xargs) # trim whitespace
+        # Split comma-separated values using zsh array splitting
+        local indices_array=(${(s:,:)selection})
+        for index in "${indices_array[@]}"; do
+            # Trim leading/trailing whitespace
+            index=$(echo "$index" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
             if [[ "$index" =~ ^[0-9]+$ ]] && [ "$index" -ge 1 ] && [ "$index" -le ${#ssh_keys[@]} ]; then
-                selected_keys+=("${ssh_keys[$((index-1))]}")
+                local selected_key="${ssh_keys[$index]}"
+                selected_keys+=("$selected_key")
             fi
         done
     fi
@@ -240,10 +247,17 @@ configure_git_user() {
     echo -e "${BLUE}👤 Configuring Git user information...${NC}"
     echo ""
     
-    read -p "Enter your full name for Git commits: " git_name
-    read -p "Enter your email address for Git commits: " git_email
+    # Initialize variables to avoid 'parameter not set' error with set -u
+    local git_name=""
+    local git_email=""
     
-    if [[ -z "$git_name" || -z "$git_email" ]]; then
+    # Use printf instead of -p flag for better compatibility with strict mode
+    printf "Enter your full name for Git commits: "
+    read -r git_name
+    printf "Enter your email address for Git commits: "
+    read -r git_email
+    
+    if [[ -z "${git_name:-}" || -z "${git_email:-}" ]]; then
         echo -e "${YELLOW}⚠️  Name and email are required for Git${NC}"
         return 1
     fi
@@ -274,21 +288,25 @@ detect_gpg_keys() {
     fi
     
     echo -e "${GREEN}Found GPG keys:${NC}"
-    for i in "${!gpg_keys[@]}"; do
-        local key_info=$(gpg --list-keys "${gpg_keys[i]}" 2>/dev/null | grep uid | head -1 | sed 's/uid.*] //')
-        echo -e "  ${GREEN}$((i+1)).${NC} ${gpg_keys[i]} - $key_info"
+    local i=1
+    for key in "${gpg_keys[@]}"; do
+        local key_info=$(gpg --list-keys "$key" 2>/dev/null | grep uid | head -1 | sed 's/uid.*] //')
+        echo -e "  ${GREEN}$i.${NC} $key - $key_info"
+        ((i++))
     done
     
     echo ""
     echo "Select a key for Git commit signing (or 'none' to skip):"
-    read -p "Selection (number or 'none'): " selection
+    printf "Selection (number or 'none'): "
+    local selection=""
+    read -r selection
     
     if [[ "$selection" == "none" ]]; then
         return 1
     fi
     
     if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le ${#gpg_keys[@]} ]; then
-        GPG_SELECTED_KEY="${gpg_keys[$((selection-1))]}"
+        GPG_SELECTED_KEY="${gpg_keys[$selection]}"
         return 0
     else
         echo -e "${YELLOW}⚠️  Invalid selection${NC}"
@@ -302,11 +320,11 @@ configure_machine_keys() {
     
     echo -e "${BLUE}⚙️  Configuring keys for machine: $machine_id${NC}"
     
-    # Create XDG config directories
-    mkdir -p "$xdg_config/git"
-    mkdir -p "$xdg_config/ssh"
-    mkdir -p "$xdg_config/gpg"
-    mkdir -p ~/.ssh/sockets  # For SSH connection multiplexing
+    # Create XDG config directories with secure permissions
+    mkdir -p "$xdg_config/git" && chmod 700 "$xdg_config/git"
+    mkdir -p "$xdg_config/ssh" && chmod 700 "$xdg_config/ssh" 
+    mkdir -p "$xdg_config/gpg" && chmod 700 "$xdg_config/gpg"
+    mkdir -p ~/.ssh/sockets && chmod 700 ~/.ssh/sockets  # For SSH connection multiplexing
     
     # Configure Git machine-specific settings
     local git_config="$xdg_config/git/machine.config"
@@ -453,9 +471,11 @@ configure_hostname() {
     local current_hostname=$(hostname -s)
     echo -e "${YELLOW}Current hostname: $current_hostname${NC}"
     
-    read -p "Enter new hostname (or press Enter to keep current): " new_hostname
+    printf "Enter new hostname (or press Enter to keep current): "
+    local new_hostname=""
+    read -r new_hostname
     
-    if [[ -z "$new_hostname" ]]; then
+    if [[ -z "${new_hostname:-}" ]]; then
         echo -e "${YELLOW}⚠️  Keeping current hostname: $current_hostname${NC}"
         return 0
     fi
@@ -718,12 +738,20 @@ update_environment() {
         
         # Check if GVM is available
         if [[ -s "$HOME/.gvm/scripts/gvm" ]]; then
+            # Temporarily disable strict mode for GVM compatibility
+            local saved_errexit="" saved_nounset="" saved_pipefail=""
+            [[ $- == *e* ]] && saved_errexit="e"
+            [[ $- == *u* ]] && saved_nounset="u" 
+            [[ $- == *o* ]] && saved_pipefail="o pipefail"
+            set +euo pipefail
+            trap - ERR
+            
             # Source GVM once at the beginning to set up all functions and environment
             source "$HOME/.gvm/scripts/gvm"
             
             echo -e "${BLUE}📦 Installing Go $GO_VERSION...${NC}"
             if gvm install "$GO_VERSION" --binary || gvm list | grep -q "$GO_VERSION"; then
-                # Check if version is already the default
+                # Check if version is already the default  
                 if gvm list | grep -q "=> $GO_VERSION"; then
                     echo -e "${GREEN}✅ Go $GO_VERSION is already active and set as default${NC}"
                 else
@@ -732,12 +760,29 @@ update_environment() {
                         echo -e "${GREEN}✅ Go environment updated!${NC}"
                     else
                         echo -e "${RED}❌ Failed to set Go $GO_VERSION as default${NC}"
+                        # Restore strict mode and error trap before returning
+                        [[ -n "$saved_errexit" ]] && set -e
+                        [[ -n "$saved_nounset" ]] && set -u
+                        [[ -n "$saved_pipefail" ]] && set -o pipefail
+                        trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
                         return 1
                     fi
                 fi
             else
                 echo -e "${RED}❌ Failed to install Go $GO_VERSION${NC}"
+                # Restore strict mode and error trap before returning  
+                [[ -n "$saved_errexit" ]] && set -e
+                [[ -n "$saved_nounset" ]] && set -u
+                [[ -n "$saved_pipefail" ]] && set -o pipefail
+                trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
+                return 1
             fi
+            
+            # Restore strict mode and error trap
+            [[ -n "$saved_errexit" ]] && set -e
+            [[ -n "$saved_nounset" ]] && set -u
+            [[ -n "$saved_pipefail" ]] && set -o pipefail
+            trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
         else
             echo -e "${RED}❌ GVM not found. Please install GVM first.${NC}"
         fi
