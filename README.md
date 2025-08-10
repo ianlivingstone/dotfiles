@@ -14,6 +14,8 @@ Modern, secure dotfiles with machine-specific configuration support. Built for d
 - **GPG signing** required for all commits and tags
 - **SSH key management** with proper per-machine configuration
 - **HTTPS-only** curl commands with modern TLS requirements
+- **Automatic security validation** warns about improper file permissions on shell startup
+- **Secure file permissions** (600/700) enforced for all configuration files
 
 ### 🖥️ **Multi-Machine Support**
 - **Different Git identities** per machine (work email vs personal email)

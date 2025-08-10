@@ -94,6 +94,43 @@ else
 fi
 ```
 
+### Strict Mode with External Tools
+```bash  
+# ✅ Handling external tools that are incompatible with strict mode
+# Problem: Tools like GVM have internal scripts that fail with set -euo pipefail
+
+# ✅ Temporary strict mode disable pattern
+handle_external_tool() {
+    # Save current strict mode settings
+    local saved_errexit="" saved_nounset="" saved_pipefail=""
+    [[ $- == *e* ]] && saved_errexit="e"
+    [[ $- == *u* ]] && saved_nounset="u" 
+    [[ $- == *o* ]] && saved_pipefail="o pipefail"
+    
+    # Disable strict mode and error trap
+    set +euo pipefail
+    trap - ERR
+    
+    # Run external tool
+    source "$external_tool_script"
+    external_tool_command --options
+    
+    # Restore strict mode and error trap
+    [[ -n "$saved_errexit" ]] && set -e
+    [[ -n "$saved_nounset" ]] && set -u
+    [[ -n "$saved_pipefail" ]] && set -o pipefail
+    trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
+}
+
+# ❌ Don't try to DRY this up with functions - shell state is context-dependent
+# The inline approach is more reliable than function-based state management
+
+# ✅ Debug output suppression (don't set GVM_DEBUG=0, just redirect stderr)
+if external_tool --command 2>/dev/null; then
+    echo "Success"
+fi
+```
+
 ### Shell Safety Mode Guidelines
 
 **For Installation Scripts (`dotfiles.sh`):**
@@ -241,11 +278,53 @@ fi
 
 ## Common Gotchas & Solutions
 
-### Shell Compatibility
+### Zsh Array Compatibility Issues  
+```bash
+# ❌ Bash-style array expansion (fails in zsh)
+for i in "${!array[@]}"; do          # "bad substitution" error in zsh
+    echo "${array[$((i+1))]}"        # 0-based indexing assumption
+done
+
+# ✅ Zsh-compatible array iteration
+local i=1
+for item in "${array[@]}"; do        # Direct iteration, no index expansion
+    echo "$i. $item"
+    ((i++))
+done
+
+# ❌ Bash-style comma splitting (fails in zsh)
+IFS=',' read -ra items <<< "$input"  # "bad option: -a" in zsh
+
+# ✅ Zsh-specific array splitting  
+local items_array=(${(s:,:)input})   # Zsh parameter expansion flags
+for item in "${items_array[@]}"; do
+    # Process each item
+done
+
+# ❌ Bash array indexing (off-by-one in zsh)
+array[0]="first"                     # 0-based in bash
+selected_item="${array[$((index-1))]}" # Wrong in zsh
+
+# ✅ Zsh array indexing (1-based by default)  
+array[1]="first"                     # 1-based in zsh
+selected_item="${array[$index]}"     # Direct index, no subtraction needed
+
+# ✅ Arithmetic expressions in strict mode
+# ❌ Problematic:
+((count++))                          # Can fail with "operator expected at '0'"
+
+# ✅ Safe alternatives:
+count=$((count + 1))                 # Explicit arithmetic
+[[ -n "${count:-}" ]] && count=$((count + 1)) # With undefined variable check
+```
+
+### Shell Compatibility Rules
 - **Never use `readarray`** - not available on all systems
+- **Test zsh-specific features** - arrays, parameter expansion, globbing differ
 - **Use `[[ ]]` instead of `[ ]`** for conditionals
 - **Quote all variables**: `"$var"` not `$var`
 - **Use portable shebang**: `#!/usr/bin/env zsh`
+- **Understand array indexing**: zsh is 1-based, bash is 0-based
 
 ### GNU Stow Gotchas  
 - **Always use `--target`** for custom destinations
@@ -346,6 +425,38 @@ safe_command() {
 }
 ```
 
+### User Input Handling in Strict Mode
+```bash
+# ❌ Problematic: read -p flag incompatible with strict mode
+read -p "Enter name: " name        # "no coprocess" error in strict mode
+
+# ✅ Strict mode compatible user input
+get_user_input() {
+    local prompt="$1" var_name="$2"
+    local user_input=""              # Initialize to avoid "parameter not set"
+    
+    printf "%s: " "$prompt"         # Use printf instead of -p flag
+    read -r user_input              # Read without -p flag
+    
+    # Safe undefined variable check before use
+    if [[ -z "${user_input:-}" ]]; then
+        echo "Input cannot be empty" >&2
+        return 1
+    fi
+    
+    # Return via global variable or echo (depending on use case)
+    eval "$var_name='$user_input'"   # Only safe when var_name is controlled
+}
+
+# ✅ Usage example
+local git_name=""
+if get_user_input "Enter your name" "git_name"; then
+    echo "Got name: $git_name"
+else
+    echo "Failed to get user input" >&2
+fi
+```
+
 ### File System Security
 ```bash
 # ✅ Secure temporary files
@@ -404,6 +515,68 @@ validate_ssh_key_strength() {
         *) return 1 ;;                        # Unknown/unsafe
     esac
 }
+```
+
+### Security Permission Management
+```bash
+# ✅ Comprehensive security permission validation and auto-fix
+# Unified function with multiple modes:
+validate_security_permissions() {
+    # Modes: --fix (auto-fix), --quiet (silent), --startup (warn-only)
+    # Files protected with 600: config files, GPG files, SSH private keys
+    # Directories protected with 700: .gnupg, .ssh, ~/.config subdirs
+}
+
+# ✅ Shell startup security check (warn-only, NO auto-fix)
+quick_security_check() {
+    validate_security_permissions --startup  # Detection only!
+}
+
+# ✅ Manual permission fixing (explicit user action)
+fix_security_permissions() {
+    validate_security_permissions --fix      # User-initiated fix
+}
+
+# ✅ Security-first principle: NEVER auto-fix without user consent
+# Shell startup should WARN about issues, not fix them silently
+```
+
+### Security Permission Patterns
+```bash
+# ✅ Files that MUST be 600 (user read/write only)
+~/.config/git/machine.config     # Git credentials and signing keys
+~/.config/ssh/machine.config     # SSH key configuration
+~/.gnupg/gpg.conf                # GPG configuration
+~/.gnupg/gpg-agent.conf          # GPG agent configuration
+~/.ssh/id_*                      # SSH private keys (not .pub files)
+
+# ✅ Directories that MUST be 700 (user access only)
+~/.gnupg                         # GPG directory
+~/.ssh                           # SSH directory
+~/.config/ssh                    # SSH config directory
+~/.config/git                    # Git config directory
+~/.config/*                      # ALL config subdirectories
+
+# ✅ Secure file creation pattern
+touch "$secure_file"
+chmod 600 "$secure_file"            # Set before writing sensitive data
+echo "sensitive data" > "$secure_file"
+
+# ✅ Secure directory creation pattern
+mkdir -p "$secure_dir" && chmod 700 "$secure_dir"
+```
+
+### Security Validation on Shell Startup
+```bash
+# ✅ Warn-only approach (implemented in prompt.sh)
+if [[ $- == *i* ]]; then
+    quick_security_check             # Detects issues, shows warnings
+    # NO automatic fixing - requires user action
+fi
+
+# Example warning output:
+# ⚠️  SECURITY WARNING: Found 2 permission issue(s) that need attention!
+#    Run 'fix_security_permissions' to fix, or 'dotfiles status' for details
 ```
 
 ### Security Logging & Auditing
