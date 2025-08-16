@@ -795,4 +795,48 @@ trap 'echo "❌ Error on line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
 - **Performance first**: Avoid expensive operations in shell startup
 - **Security first**: Validate input, secure credentials, audit actions
 
+## Claude Code Configuration Management
+
+### .claude_code File Guidelines
+
+**MUST include in .claude_code:**
+- Safe read-only tools (Read, Grep, Glob, LS, TodoWrite)
+- Safe bash commands (ls, pwd, cd, cat, head, tail, which, command)
+- Read-only git commands (status, log, diff, show, branch)
+- Read-only system commands (version checks, list operations)
+- Repository-specific utilities (./dotfiles.sh status, ~/tmux.sh get_battery_status)
+- Generic patterns that work across all machines and users
+
+**NEVER include in .claude_code:**
+- Destructive commands (rm, mv with overwrite potential, chmod)
+- Write operations (git commit, git push, package installs)
+- System modification commands (sudo operations, system configs)
+- User-specific or machine-specific paths
+- Commands that modify state without explicit user consent
+
+**Example safe .claude_code structure:**
+```json
+{
+  "trusted_tools": ["Read", "Grep", "Glob", "LS", "TodoWrite"],
+  "trusted_bash_commands": [
+    "git status", "git log", "git diff",
+    "tmux list-*", "tmux show-*", 
+    "./dotfiles.sh status",
+    "npm --version", "brew list"
+  ],
+  "repository_context": {
+    "description": "Generic project description",
+    "build_commands": ["safe build commands"],
+    "test_commands": ["safe test commands"]
+  }
+}
+```
+
+**Maintenance Guidelines:**
+- MUST update .claude_code when adding new safe utility scripts
+- MUST review trusted commands periodically for security
+- SHOULD commit .claude_code to share convenience with other users (if all entries are safe)
+- NEVER add commands that could cause data loss or security issues
+- MUST test .claude_code changes with fresh Claude sessions
+
 This project prioritizes security, performance, and maintainability in a bash/macOS environment using GNU Stow for configuration management.
