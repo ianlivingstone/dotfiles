@@ -37,5 +37,5 @@ if [[ $- == *i* ]]; then
     quick_security_check
     
     shell_status
-    echo "💡 Run 'dotfiles' to check your complete setup status"
+    echo "💡 Run 'dotfiles status' to check your complete setup status"
 fi

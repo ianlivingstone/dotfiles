@@ -165,6 +165,34 @@ dotfiles_status() {
     else
         echo "   ❌ Starship: Not installed"
     fi
+    
+    # Docker
+    if command -v docker &>/dev/null; then
+        local docker_client_version=$(docker --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+        if [[ -n "$docker_client_version" ]]; then
+            local major_version=${docker_client_version%%.*}
+            if [[ $major_version -ge 28 ]]; then
+                # Check if Docker daemon is running and get server version
+                local docker_server_info=$(docker info --format '{{.ServerVersion}}' 2>/dev/null)
+                if [[ -n "$docker_server_info" ]]; then
+                    local server_major=${docker_server_info%%.*}
+                    if [[ $server_major -ge 28 ]]; then
+                        echo "   ✅ Docker: Client $docker_client_version, Server $docker_server_info"
+                    else
+                        echo "   ⚠️  Docker: Client $docker_client_version, Server $docker_server_info (server <28)"
+                    fi
+                else
+                    echo "   ⚠️  Docker: Client $docker_client_version (daemon not running)"
+                fi
+            else
+                echo "   ⚠️  Docker: $docker_client_version (requires 28+)"
+            fi
+        else
+            echo "   ❌ Docker: Version detection failed"
+        fi
+    else
+        echo "   ❌ Docker: Not installed"
+    fi
     echo
     
     # Security & Agents
@@ -263,6 +291,11 @@ dotfiles_status() {
     
     # Security permissions validation
     validate_security_permissions
+    
+    # Version requirements validation
+    echo
+    echo "📋 Version Requirements:"
+    validate_tool_versions
     
     echo
     echo "💡 Run './dotfiles.sh help' for management commands"
@@ -423,6 +456,110 @@ fix_security_permissions() {
 # Warns about critical security issues but does NOT fix them automatically
 quick_security_check() {
     validate_security_permissions --startup
+}
+
+# Version validation function
+validate_tool_versions() {
+    local versions_file="$HOME/code/src/github.com/ianlivingstone/dotfiles/versions.config"
+    local issues=()
+    
+    if [[ ! -f "$versions_file" ]]; then
+        return 0
+    fi
+    
+    while IFS=':' read -r tool min_version; do
+        # Skip comments and empty lines
+        [[ -z "$tool" || "$tool" =~ ^[[:space:]]*# ]] && continue
+        
+        # Trim whitespace
+        tool=$(echo "$tool" | xargs)
+        min_version=$(echo "$min_version" | xargs)
+        
+        if command -v "$tool" &>/dev/null; then
+            local current_version=""
+            case "$tool" in
+                "docker")
+                    current_version=$(docker --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "git")
+                    current_version=$(git --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "node")
+                    current_version=$(node --version 2>/dev/null)
+                    ;;
+                "go")
+                    current_version=$(go version 2>/dev/null | grep -o 'go[0-9]\+\.[0-9]\+\.[0-9]\+')
+                    ;;
+                "zsh")
+                    current_version=$(zsh --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "stow")
+                    current_version=$(stow --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "brew")
+                    current_version=$(brew --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "nvim")
+                    current_version=$(nvim --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "tmux")
+                    current_version=$(tmux -V 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+')
+                    ;;
+                "starship")
+                    current_version=$(starship --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "jq")
+                    current_version=$(jq --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+')
+                    ;;
+                "rg")
+                    current_version=$(rg --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "luarocks")
+                    current_version=$(luarocks --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "gpg")
+                    current_version=$(gpg --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "nvm")
+                    current_version=$(nvm --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "gvm")
+                    current_version=$(gvm version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "rustup")
+                    current_version=$(rustup --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+            esac
+            
+            if [[ -n "$current_version" ]]; then
+                # Normalize versions for comparison (remove prefixes for comparison only)
+                local current_clean="$current_version"
+                local min_clean="$min_version"
+                
+                # Remove common prefixes for comparison
+                current_clean="${current_clean#v}"
+                current_clean="${current_clean#go}"
+                min_clean="${min_clean#v}"
+                min_clean="${min_clean#go}"
+                
+                # Simple version comparison (works for major.minor.patch)
+                if ! printf '%s\n%s\n' "$min_clean" "$current_clean" | sort -V | head -1 | grep -q "^$min_clean$"; then
+                    issues+=("$tool: $current_version < $min_version (required)")
+                fi
+            fi
+        fi
+    done < "$versions_file"
+    
+    if [[ ${#issues[@]} -gt 0 ]]; then
+        echo "   ⚠️  Version issues found:"
+        for issue in "${issues[@]}"; do
+            echo "       • $issue"
+        done
+        return 1
+    else
+        echo "   ✅ All tools meet minimum version requirements"
+        return 0
+    fi
 }
 
 # Simple alias to dotfiles.sh script (now handles caching internally)

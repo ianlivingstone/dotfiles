@@ -16,6 +16,7 @@ Modern, secure dotfiles with machine-specific configuration support. Built for d
 - **HTTPS-only** curl commands with modern TLS requirements
 - **Automatic security validation** warns about improper file permissions on shell startup
 - **Secure file permissions** (600/700) enforced for all configuration files
+- **Version compliance checking** validates all tools meet minimum requirements
 
 ### 🖥️ **Multi-Machine Support**
 - **Different Git identities** per machine (work email vs personal email)
@@ -51,6 +52,7 @@ The installer checks for these and provides install commands if missing:
 **Required Tools:**
 ```bash
 brew install stow starship luarocks ripgrep neovim tmux
+brew install --cask docker
 ```
 
 **Development Managers:**
@@ -65,11 +67,36 @@ curl --proto '=https' --tlsv1.2 -sSfL https://raw.githubusercontent.com/moovweb/
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
+## 📋 Version Management
+
+All tool versions are centrally managed in `versions.config`:
+
+```bash
+# Core system tools (required)
+git:2.40
+docker:28.0
+nvim:0.9
+
+# Programming languages (required)  
+node:v24.1.0
+go:go1.24.1
+
+# Development managers (required)
+nvm:0.39
+gvm:1.0
+rustup:1.25
+```
+
+- **Status checking**: `./dotfiles.sh status` validates all tools meet minimum versions
+- **Automatic updates**: `./dotfiles.sh update` installs/updates Node.js and Go to specified versions
+- **Team consistency**: Version requirements are shared across all machines via git
+
 ## 🛠️ Management Commands
 
 ```bash
 ./dotfiles.sh install      # Install/configure dotfiles (interactive)
-./dotfiles.sh status       # Check installation status
+./dotfiles.sh status       # Check installation status and version compliance
+./dotfiles.sh update       # Update Node.js, Go versions from versions.config
 ./dotfiles.sh uninstall    # Remove all dotfiles symlinks  
 ./dotfiles.sh help         # Show all available commands
 ```

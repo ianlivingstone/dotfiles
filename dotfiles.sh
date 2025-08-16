@@ -119,6 +119,21 @@ check_dependencies() {
         missing_deps+=("gpg")
     fi
     
+    # Check for containerization tools
+    if ! command -v docker &> /dev/null; then
+        missing_deps+=("docker")
+    else
+        # Validate Docker version (requires 28+)
+        local docker_version=$(docker --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+        if [[ -n "$docker_version" ]]; then
+            local major_version=${docker_version%%.*}
+            if [[ $major_version -lt 28 ]]; then
+                echo -e "${YELLOW}⚠️  Docker version $docker_version found, but 28+ required${NC}"
+                missing_deps+=("docker-upgrade")
+            fi
+        fi
+    fi
+    
     # Check for optional tools - none currently
     
     # Report missing required dependencies
@@ -167,6 +182,12 @@ check_dependencies() {
                     ;;
                 "gpg")
                     echo -e "  ${RED}•${NC} GnuPG: brew install gnupg"
+                    ;;
+                "docker")
+                    echo -e "  ${RED}•${NC} Docker: brew install --cask docker"
+                    ;;
+                "docker-upgrade")
+                    echo -e "  ${RED}•${NC} Docker: brew upgrade --cask docker (requires version 28+)"
                     ;;
             esac
         done
@@ -701,9 +722,8 @@ update_environment() {
     export DOTFILES_UPDATE_MODE=1
     
     # Update Node.js via NVM
-    if [[ -f "$DOTFILES_DIR/shell/nvm.config" ]]; then
-        source "$DOTFILES_DIR/shell/nvm.config"
-        
+    local NODE_VERSION=$(get_version_requirement "node")
+    if [[ -n "$NODE_VERSION" ]]; then
         # Ensure NVM is loaded
         if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
             source "$HOME/.nvm/nvm.sh"
@@ -727,15 +747,14 @@ update_environment() {
             echo -e "${RED}❌ NVM not found. Please install NVM first.${NC}"
         fi
     else
-        echo -e "${YELLOW}⚠️  NVM config not found${NC}"
+        echo -e "${YELLOW}⚠️  Node.js version not specified in versions.config${NC}"
     fi
     
     echo ""
     
     # Update Go via GVM
-    if [[ -f "$DOTFILES_DIR/shell/gvm.config" ]]; then
-        source "$DOTFILES_DIR/shell/gvm.config"
-        
+    local GO_VERSION=$(get_version_requirement "go")
+    if [[ -n "$GO_VERSION" ]]; then
         # Check if GVM is available
         if [[ -s "$HOME/.gvm/scripts/gvm" ]]; then
             # Temporarily disable strict mode for GVM compatibility
@@ -787,7 +806,7 @@ update_environment() {
             echo -e "${RED}❌ GVM not found. Please install GVM first.${NC}"
         fi
     else
-        echo -e "${YELLOW}⚠️  GVM config not found${NC}"
+        echo -e "${YELLOW}⚠️  Go version not specified in versions.config${NC}"
     fi
     
     # Clean up update mode

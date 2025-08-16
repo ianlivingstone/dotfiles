@@ -14,6 +14,7 @@ This CLAUDE.md focuses on bash-specific development guidance and conventions.
 - **Package Manager**: GNU Stow for symlink management
 - **Shell**: Zsh with modular configuration
 - **Security**: GPG signing required, SSH key validation
+- **Version Management**: Centralized in `versions.config` with validation
 
 ## Key Commands for Development
 
@@ -25,6 +26,10 @@ This CLAUDE.md focuses on bash-specific development guidance and conventions.
 # Debug shell modules
 source shell/module.sh        # Test individual modules
 echo $SHELL_DIR              # Check path resolution
+
+# Dependency management
+./dotfiles.sh install         # Checks all dependencies including Docker 28+
+./dotfiles.sh update          # Updates Node.js, Go versions from versions.config
 
 # Add new packages
 echo "mypackage" >> packages.config  # Default target (~/)
@@ -620,7 +625,40 @@ secure_exec() {
 - [ ] **Error messages**: Don't expose sensitive paths or information
 - [ ] **Cleanup**: Clear actual secrets (passphrases, keys) - not public data
 - [ ] **Dependencies**: Use `command -v` detection, never hardcode paths
+- [ ] **Version Management**: Use `get_version_requirement()` for centralized version lookup
+- [ ] **Version Validation**: All tools validate against `versions.config` requirements
 - [ ] **Portability**: Generate configs dynamically, avoid hardcoded system paths
+
+## Version Management Architecture
+
+This project uses centralized version management via `versions.config`:
+
+### Key Components
+1. **`versions.config`** - Single source of truth for all tool version requirements
+2. **`get_version_requirement()`** - Utility function to read versions from config
+3. **`validate_tool_versions()`** - Function to validate all tools against requirements
+4. **Shell modules** - Use centralized version lookup instead of individual config files
+
+### Migration from Individual Configs
+The previous approach used separate files (`nvm.config`, `gvm.config`) which created:
+- **Duplication** - Same version info in multiple places
+- **Inconsistency** - Could get out of sync between files
+- **Maintenance overhead** - Multiple files to update for version changes
+
+**New consolidated approach:**
+```bash
+# Old pattern (deprecated)
+load_config "$MODULE_DIR/tool.config" "TOOL_VERSION" "fallback-value"
+
+# New pattern (current)
+TOOL_VERSION=$(get_version_requirement "tool" || echo "fallback-version")
+```
+
+### Version Validation
+- **Status integration** - `dotfiles status` shows version compliance for all tools
+- **Prefix handling** - Properly compares versions with prefixes (v24.1.0, go1.24.1)
+- **Team consistency** - Shared requirements ensure consistent environments
+- **Clear reporting** - Shows current vs required versions for non-compliant tools
 
 ## Critical Security Issues in Current Codebase
 

@@ -8,8 +8,8 @@ source "$(cd "$(dirname "${(%):-%N}")" && pwd)/utils.sh"
 # Get the directory containing this script
 MODULE_DIR="$(get_shell_dir)"
 
-# Load Go version from config
-load_config "$MODULE_DIR/gvm.config" "GO_VERSION" "go1.24.1"
+# Get GO_VERSION from versions.config or use fallback
+GO_VERSION=$(get_version_requirement "go" || echo "go1.24.1")
 
 # Setup GVM directory
 export GVM_ROOT="$HOME/.gvm"

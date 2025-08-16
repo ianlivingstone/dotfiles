@@ -65,6 +65,26 @@ show_warning() {
     echo "⚠️  $1. Run: dotfiles update"
 }
 
+# Function to read version from versions.config
+get_version_requirement() {
+    local tool="$1"
+    local versions_file="$HOME/code/src/github.com/ianlivingstone/dotfiles/versions.config"
+    
+    if [[ ! -f "$versions_file" ]]; then
+        return 1
+    fi
+    
+    # Look for the tool in versions.config
+    local version=$(grep "^${tool}:" "$versions_file" 2>/dev/null | cut -d':' -f2 | xargs)
+    
+    if [[ -n "$version" ]]; then
+        echo "$version"
+        return 0
+    fi
+    
+    return 1
+}
+
 # Install global npm packages from package.json
 # Usage: install_npm_globals package_json_file
 install_npm_globals() {

@@ -298,9 +298,7 @@ shell/
 ├── agents.sh           # SSH and GPG agent management
 ├── prompt.sh           # Shell prompt configuration
 ├── nvm.sh              # Node.js version management module
-├── nvm.config          # Node.js version configuration
-├── gvm.sh              # Go version management module
-└── gvm.config          # Go version configuration
+└── gvm.sh              # Go version management module
 ```
 
 **Module Loading Order** (critical for dependencies):
@@ -323,7 +321,7 @@ shell/
 
 - **Version Manager Modules**: Dedicated modules for each language:
   - **Fast filesystem checks** instead of slow manager commands
-  - **Centralized configuration** in `.config` files
+  - **Centralized configuration** in `versions.config`
   - **Unified update system** via `dotfiles update`
   - **Proper PATH management** ensuring binaries are available
 
@@ -358,17 +356,13 @@ MODULE_DIR="$(get_shell_dir)"
 MODULE_DIR="/Users/user/dotfiles/shell"  # Bad!
 ```
 
-**2. Config File Loading**:
+**2. Version Requirements**:
 ```bash
-# ✅ Use centralized config loading
-load_config "$MODULE_DIR/tool.config" "TOOL_VERSION" "default-version"
+# ✅ Use centralized version management
+TOOL_VERSION=$(get_version_requirement "tool" || echo "default-version")
 
-# ❌ Don't duplicate config logic
-if [[ -f "$MODULE_DIR/tool.config" ]]; then  # Bad!
-    source "$MODULE_DIR/tool.config"
-else
-    TOOL_VERSION="default"
-fi
+# ❌ Don't use separate config files
+load_config "$MODULE_DIR/tool.config" "TOOL_VERSION" "default-version"  # Old pattern
 ```
 
 **3. PATH Management**:
@@ -397,8 +391,8 @@ echo "⚠️  Tool not found. Run dotfiles update"  # Bad - inconsistent
 # Get module directory
 MODULE_DIR="$(get_shell_dir)"
 
-# Load configuration
-load_config "$MODULE_DIR/tool.config" "TOOL_VERSION" "default-version"
+# Get version requirement from versions.config
+TOOL_VERSION=$(get_version_requirement "tool" || echo "default-version")
 
 # Check if tool manager exists
 if [[ -s "$HOME/.tool/scripts/tool" ]]; then
@@ -426,8 +420,9 @@ The installer checks for and guides installation of:
 
 **Required Dependencies** (installation blocked if missing):
 - Core tools: `stow`, `starship`, `git`, `zsh`, `luarocks`, `rg`, `brew`
+- Containerization: `docker` (version 28+)
 - Editors: `nvim`, `tmux`  
-- Version managers: `nvm`, `gvm`, `cargo/rust`
+- Version managers: `nvm`, `gvm`, `rustup`
 
 **Security Enforcement**:
 - All curl commands use `--proto '=https' --tlsv1.2`
@@ -439,6 +434,37 @@ The installer checks for and guides installation of:
 2. **SSH Key Detection**: Scans `~/.ssh/` and allows selection
 3. **GPG Key Detection**: Scans GPG keyring and allows selection
 4. **Config Generation**: Creates machine-specific include files
+
+### Version Management System
+
+All tool version requirements are centralized in `versions.config`:
+
+```bash
+# Core system tools (required)
+git:2.40
+docker:28.0
+nvim:0.9
+
+# Programming languages (required)  
+node:v24.1.0
+go:go1.24.1
+
+# Development managers (required)
+nvm:0.39
+gvm:1.0
+rustup:1.25
+```
+
+**Version Validation Process**:
+1. **Status checking**: `./dotfiles.sh status` validates all installed tools against minimum versions
+2. **Automatic updates**: `./dotfiles.sh update` installs/updates Node.js and Go to specified versions  
+3. **Shell modules**: Use `get_version_requirement()` to read centralized requirements
+4. **Team consistency**: Requirements shared via git, ensuring consistent environments
+
+**Version Comparison Features**:
+- **Prefix handling**: Properly compares `v24.1.0` vs `24.1.0`, `go1.24.1` vs `1.24.1`
+- **Semantic versioning**: Uses `sort -V` for proper version comparison
+- **Clear reporting**: Shows current vs required versions for non-compliant tools
 
 ## Why This Architecture?
 

@@ -8,8 +8,8 @@ source "$(cd "$(dirname "${(%):-%N}")" && pwd)/utils.sh"
 # Get the directory containing this script
 MODULE_DIR="$(get_shell_dir)"
 
-# Load node version from config
-load_config "$MODULE_DIR/nvm.config" "NODE_VERSION" "v24.1.0"
+# Get NODE_VERSION from versions.config or use fallback
+NODE_VERSION=$(get_version_requirement "node" || echo "v24.1.0")
 
 # Setup NVM directory
 export NVM_DIR="$HOME/.nvm"
