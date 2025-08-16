@@ -1,0 +1,13 @@
+--ignore=.*\.md
+--ignore=LICENSE
+--ignore=\.git
+--ignore=\.gitignore
+--ignore=\.gitmodules
+--ignore=\.DS_Store
+--ignore=.*\.swp
+--ignore=.*\.swo
+--ignore=.*~
+--ignore=.*\.backup
+--ignore=.*\.local
+--ignore=.*\.machine
+--ignore=npm-globals
