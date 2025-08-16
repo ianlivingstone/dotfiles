@@ -1,11 +1,13 @@
 # Dotfiles Project Context for Claude
 
-This is a bash/shell-based dotfiles management system for macOS using GNU Stow. 
+This is a bash/shell-based dotfiles management system for macOS using GNU Stow.
+
+**📋 AGENTS.md Compliance**: This file follows the Agent Rules specification for AI coding agents. All sections use imperative statements with RFC 2119 keywords (MUST, SHOULD, MAY) and flat bullet list format for scannable rules.
 
 **📖 For architecture and design principles**: Read [ARCHITECTURE.md](ARCHITECTURE.md)
 **📖 For user documentation and features**: Read [README.md](README.md)
 
-This CLAUDE.md focuses on bash-specific development guidance and conventions.
+This CLAUDE.md focuses on bash-specific development guidance and conventions following Agent Rules format.
 
 ## Project Type & Environment
 
@@ -15,6 +17,7 @@ This CLAUDE.md focuses on bash-specific development guidance and conventions.
 - **Shell**: Zsh with modular configuration
 - **Security**: GPG signing required, SSH key validation
 - **Version Management**: Centralized in `versions.config` with validation
+- **Architecture**: Distributed documentation in per-directory `agent.md` files
 
 ## Key Commands for Development
 
@@ -659,6 +662,55 @@ TOOL_VERSION=$(get_version_requirement "tool" || echo "fallback-version")
 - **Prefix handling** - Properly compares versions with prefixes (v24.1.0, go1.24.1)
 - **Team consistency** - Shared requirements ensure consistent environments
 - **Clear reporting** - Shows current vs required versions for non-compliant tools
+
+## Architecture Documentation Guidelines
+
+This project uses **distributed architecture documentation** following Agent Rules specification.
+
+### Agent Rules Compliance for Documentation
+- MUST follow Agent Rules specification for all AI agent guidance files
+- MUST use imperative statements with RFC 2119 keywords (MUST, SHOULD, MAY, NEVER)
+- MUST use flat bullet list format for scannable rules
+- MUST keep documentation current with code changes
+- SHOULD reference detailed documentation files rather than duplicating content
+
+### Architecture File Structure
+```
+├── AGENTS.md                   # Agent Rules compliant quick reference
+├── ARCHITECTURE.md             # High-level project architecture (Agent Rules format)
+├── CLAUDE.md                   # Claude-specific guidelines (Agent Rules format)
+├── shell/agent.md              # Shell configuration architecture
+├── nvim/agent.md               # Neovim configuration architecture  
+├── git/agent.md                # Git configuration architecture
+├── ssh/agent.md                # SSH configuration architecture
+├── tmux/agent.md               # Tmux configuration architecture
+└── [component]/agent.md        # Component-specific architecture
+```
+
+### Documentation Maintenance Rules
+
+#### When Making Changes
+- MUST update the component's `agent.md` file when modifying that component
+- MUST update integration sections in related component `agent.md` files for cross-component changes
+- MUST update `ARCHITECTURE.md` for high-level architectural changes
+- MUST verify all documentation links still work after changes
+- SHOULD include code examples that follow established patterns
+
+#### Agent Rules Format Requirements
+- MUST use imperative statements (e.g., "Update the file" not "You should update the file")
+- MUST use RFC 2119 keywords for clarity (MUST, SHOULD, MAY, NEVER)
+- MUST structure as flat bullet lists for scannability
+- MUST be concise and actionable
+- SHOULD reference comprehensive documentation files for details
+
+#### Documentation Standards
+- MUST answer: Why was this architectural choice made?
+- MUST document: How does it integrate with other components?
+- MUST include: Key patterns and conventions
+- MUST specify: When to follow specific patterns
+- MUST identify: Integration points and dependencies
+- NEVER include: Outdated examples that don't match current codebase
+- NEVER create: Generic documentation that could apply to any project
 
 ## Critical Security Issues in Current Codebase
 
