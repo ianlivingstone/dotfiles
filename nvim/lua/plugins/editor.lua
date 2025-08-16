@@ -15,6 +15,26 @@ M.plugins = {
     keys = {
       { "<leader>e", "<cmd>NvimTreeToggle<cr>", desc = "Toggle file explorer" },
     },
+    init = function()
+      -- Auto-open nvim-tree when starting nvim with a directory
+      vim.api.nvim_create_autocmd("VimEnter", {
+        callback = function(data)
+          -- Check if we opened a directory
+          local directory = vim.fn.isdirectory(data.file) == 1
+          
+          if directory then
+            -- Delete the directory buffer
+            vim.cmd.bdelete(data.buf)
+            
+            -- Change to the directory
+            vim.cmd.cd(data.file)
+            
+            -- Open nvim-tree
+            require("nvim-tree.api").tree.open()
+          end
+        end,
+      })
+    end,
     config = function()
       local ok, nvim_tree = pcall(require, "nvim-tree")
       if not ok then

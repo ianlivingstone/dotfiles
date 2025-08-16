@@ -839,4 +839,10 @@ trap 'echo "❌ Error on line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
 - NEVER add commands that could cause data loss or security issues
 - MUST test .claude_code changes with fresh Claude sessions
 
+**Security Review Process:**
+- MUST verify all trusted commands are truly read-only
+- MUST ensure no user-specific paths or credentials are included
+- MUST test that malicious arguments cannot cause harm via trusted commands
+- SHOULD periodically audit trusted command list for security implications
+
 This project prioritizes security, performance, and maintainability in a bash/macOS environment using GNU Stow for configuration management.
