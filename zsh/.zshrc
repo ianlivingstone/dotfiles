@@ -3,7 +3,22 @@
 
 # Get the directory containing the actual shell modules
 # The shell scripts are in the shell/ directory, not the zsh/ directory
-DOTFILES_DIR="/Users/ian/code/src/github.com/ianlivingstone/dotfiles"
+# Derive the dotfiles directory from this script's location, resolving symlinks
+SCRIPT_PATH="${BASH_SOURCE[0]:-${(%):-%N}}"
+
+# Resolve symlinks to get the real path
+if [[ -L "$SCRIPT_PATH" ]]; then
+    local target="$(readlink "$SCRIPT_PATH")"
+    # Handle relative symlinks by making them absolute
+    if [[ "$target" != /* ]]; then
+        SCRIPT_PATH="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)/$target"
+    else
+        SCRIPT_PATH="$target"
+    fi
+fi
+
+ZSH_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+DOTFILES_DIR="$(dirname "$ZSH_DIR")"
 SHELL_DIR="$DOTFILES_DIR/shell"
 
 # Load utility functions

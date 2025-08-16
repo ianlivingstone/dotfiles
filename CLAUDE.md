@@ -42,15 +42,42 @@ echo "mypackage:$XDG_CONFIG_DIR/mypackage" >> packages.config  # Custom target
 ## Bash/Shell Development Patterns
 
 ### Path Resolution (Critical)
-```bash
-# ✅ ALWAYS use this pattern for shell modules
-SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"
-source "$SHELL_DIR/utils.sh"
 
-# ✅ Use utility functions
+**NEVER hardcode dotfiles directory paths** - this is a common mistake that breaks the system.
+
+```bash
+# ❌ NEVER hardcode paths (common Claude mistake)
+DOTFILES_DIR="/Users/ian/code/src/github.com/ianlivingstone/dotfiles"
+SHELL_DIR="$DOTFILES_DIR/shell"
+
+# ✅ ALWAYS derive paths dynamically with symlink resolution
+SCRIPT_PATH="${BASH_SOURCE[0]:-${(%):-%N}}"
+
+# Resolve symlinks to get the real path (critical for stowed files)
+if [[ -L "$SCRIPT_PATH" ]]; then
+    local target="$(readlink "$SCRIPT_PATH")"
+    # Handle relative symlinks by making them absolute
+    if [[ "$target" != /* ]]; then
+        SCRIPT_PATH="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)/$target"
+    else
+        SCRIPT_PATH="$target"
+    fi
+fi
+
+COMPONENT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+DOTFILES_DIR="$(dirname "$COMPONENT_DIR")"
+SHELL_DIR="$DOTFILES_DIR/shell"
+
+# ✅ Use utility functions for common operations
 get_shell_dir()          # Portable path resolution with symlinks
 get_xdg_config_dir()     # Consistent XDG directory handling
 ```
+
+**Why Dynamic Path Resolution is Required:**
+- GNU Stow creates symlinks from `~/` to actual dotfiles directory
+- Hardcoded paths break when dotfiles location changes between machines
+- Symlink resolution ensures scripts find source files, not symlinked locations
+- Multiple users/environments require path portability
 
 ### Config File Loading
 ```bash
