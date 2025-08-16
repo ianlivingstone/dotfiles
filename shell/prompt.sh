@@ -2,6 +2,10 @@
 # Shell prompt and status configuration
 # SOURCED MODULE: Uses graceful error handling, never use set -e
 
+# Source shared utilities
+SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"
+source "$SHELL_DIR/utils.sh"
+
 # Shell status function
 shell_status() {
     # Only show for interactive shells
@@ -25,7 +29,13 @@ shell_status() {
         git_info="📦 $branch $git_status | "
     fi
     
-    echo "🏠 $user_host $current_dir | ⏱ $uptime_info | $git_info🕐 $current_time"
+    # Battery info if available
+    local battery_info=""
+    if battery_status=$(get_battery_status 2>/dev/null); then
+        battery_info="$battery_status | "
+    fi
+    
+    echo "🏠 $user_host $current_dir | ⏱ $uptime_info | $git_info$battery_info🕐 $current_time"
 }
 
 # Initialize starship prompt

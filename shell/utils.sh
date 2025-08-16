@@ -159,3 +159,92 @@ install_npm_globals() {
     [[ -n "$saved_pipefail" ]] && set -o pipefail
     trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
 }
+
+# Check if system is a macOS laptop (has battery)
+# Usage: is_macos_laptop
+is_macos_laptop() {
+    # Check if we're on macOS
+    [[ "$(uname -s)" != "Darwin" ]] && return 1
+    
+    # Check if system has battery using pmset
+    local battery_info
+    battery_info=$(pmset -g batt 2>/dev/null) || return 1
+    
+    # Look for "InternalBattery" or "Battery" in output
+    [[ "$battery_info" =~ (InternalBattery|Battery) ]] && return 0
+    
+    return 1
+}
+
+# Get battery status with caching (30 second cache)
+# Usage: get_battery_status
+get_battery_status() {
+    # Only run on macOS laptops
+    is_macos_laptop || return 1
+    
+    # Cache variables
+    local cache_file="$HOME/.cache/dotfiles_battery_cache"
+    local cache_duration=30
+    
+    # Create cache directory if it doesn't exist
+    mkdir -p "$(dirname "$cache_file")"
+    
+    # Check if cache is valid (less than 30 seconds old)
+    if [[ -f "$cache_file" ]]; then
+        local cache_age=$(($(date +%s) - $(stat -f %m "$cache_file" 2>/dev/null || echo 0)))
+        if [[ $cache_age -lt $cache_duration ]]; then
+            cat "$cache_file"
+            return 0
+        fi
+    fi
+    
+    # Get fresh battery info
+    local battery_info
+    battery_info=$(pmset -g batt 2>/dev/null) || return 1
+    
+    # Parse battery percentage and status
+    local percentage
+    local battery_status
+    local time_remaining
+    
+    # Extract percentage
+    if [[ "$battery_info" =~ ([0-9]+)% ]]; then
+        percentage="${match[1]}"
+    else
+        return 1
+    fi
+    
+    # Extract status
+    if [[ "$battery_info" =~ (charging|discharging|charged|AC\ attached) ]]; then
+        battery_status="${match[1]}"
+    else
+        battery_status="unknown"
+    fi
+    
+    # Extract time remaining (optional)
+    time_remaining=""
+    if [[ "$battery_info" =~ ([0-9]+:[0-9]+)\ remaining ]]; then
+        time_remaining="${match[1]}"
+    fi
+    
+    # Format output with appropriate emoji
+    local battery_display
+    if [[ "$battery_status" =~ ^(charging|AC\ attached)$ ]]; then
+        battery_display="⚡ ${percentage}%"
+    elif [[ $percentage -le 15 ]]; then
+        battery_display="🪫 ${percentage}%"
+    elif [[ $percentage -le 30 ]]; then
+        battery_display="🔋 ${percentage}%"
+    else
+        battery_display="🔋 ${percentage}%"
+    fi
+    
+    # Add time remaining if available and not "0:00"
+    if [[ -n "$time_remaining" && "$time_remaining" != "0:00" ]]; then
+        battery_display="${battery_display} (${time_remaining})"
+    fi
+    
+    # Cache the result
+    echo "$battery_display" > "$cache_file"
+    echo "$battery_display"
+}
