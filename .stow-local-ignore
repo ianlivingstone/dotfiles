@@ -10,9 +10,8 @@ npm-globals
 \.gitmodules
 
 # Documentation and meta files
-README\.md
+.*\.md
 LICENSE
-CHANGELOG\.md
 
 # macOS files
 \.DS_Store
