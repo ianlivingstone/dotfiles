@@ -601,6 +601,11 @@ install_dotfiles() {
     # Configure hostname
     configure_hostname
     
+    # Install Tmux Plugin Manager (TPM) for session persistence
+    echo ""
+    source "$DOTFILES_DIR/shell/tmux.sh"
+    install_tmux_plugins
+    
     echo ""
     echo -e "${GREEN}✅ Dotfiles installation complete!${NC}"
     
@@ -808,6 +813,12 @@ update_environment() {
     else
         echo -e "${YELLOW}⚠️  Go version not specified in versions.config${NC}"
     fi
+    
+    echo ""
+    
+    # Update tmux plugins
+    source "$DOTFILES_DIR/shell/tmux.sh"
+    update_tmux_plugins
     
     # Clean up update mode
     unset DOTFILES_UPDATE_MODE

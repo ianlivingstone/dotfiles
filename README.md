@@ -101,8 +101,9 @@ rustup:1.25
 ./dotfiles.sh help         # Show all available commands
 ```
 
-### 📦 **Neovim Plugin Management**
+### 📦 **Plugin Management**
 
+#### **Neovim Plugins**
 This setup uses [lazy.nvim](https://lazy.folke.io/) with controlled updates:
 
 ```vim
@@ -118,6 +119,24 @@ This setup uses [lazy.nvim](https://lazy.folke.io/) with controlled updates:
 - When you modify plugin config, lazy.nvim **notifies** you but **doesn't auto-update**
 - You control when to update with `:Lazy sync` (recommended) or `:Lazy update`
 - The lockfile is committed to git, ensuring consistent plugin versions across machines
+
+#### **Tmux Session Persistence**
+Sessions automatically save/restore using tmux-resurrect and tmux-continuum:
+
+```bash
+# Session management (in tmux)
+Ctrl-a Ctrl-s             # Save session manually
+Ctrl-a Ctrl-r             # Restore session manually
+
+# Plugin management
+./dotfiles.sh update       # Update tmux plugins to latest versions
+```
+
+**How it works:**
+- **Auto-save**: Sessions save every 15 minutes automatically
+- **Auto-restore**: Sessions restore when tmux starts
+- **Pane contents**: Terminal output is preserved across restarts
+- **Persistence**: Survives computer restarts and tmux crashes
 
 ## 📁 What Gets Installed
 

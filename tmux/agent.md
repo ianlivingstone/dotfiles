@@ -8,6 +8,9 @@ The tmux package provides a modern terminal multiplexer configuration optimized 
 ## Design Principles
 - MUST use Vi-style key bindings for familiar movement
 - MUST provide modern status line with useful information for visual clarity
+- MUST support session persistence across restarts for workflow continuity
+- MUST integrate with dotfiles shell utilities for dynamic content
+- MUST use plugin manager (TPM) for maintainable plugin management
 - MAY include optional mouse integration for convenience
 - MUST optimize for coding and terminal workflows (development focused)
 - MUST ensure efficient rendering and memory usage
@@ -17,7 +20,9 @@ The tmux package provides a modern terminal multiplexer configuration optimized 
 ### File Structure
 ```
 tmux/
-└── .tmux.conf             # Main tmux configuration (symlinked to ~/.tmux.conf)
+├── .tmux.conf             # Main tmux configuration (symlinked to ~/.tmux.conf)
+├── tmux.sh                # Utility script for shell function access (symlinked to ~/tmux.sh)
+└── agent.md               # This architecture documentation
 ```
 
 ### Core Configuration Sections
@@ -368,5 +373,91 @@ man tmux                                # Check feature availability
 - Update this agent.md file
 - Add comments for complex configurations
 - Test across different tmux versions
+
+## Plugin Management Architecture
+
+### TPM (Tmux Plugin Manager) Integration
+- MUST use TPM for all plugin management to ensure consistency
+- MUST install TPM automatically via `./dotfiles.sh install`
+- MUST update plugins automatically via `./dotfiles.sh update`
+- NEVER manually git clone plugins - use TPM for all plugin operations
+
+### Session Persistence Plugins
+```bash
+# Required plugins for session management
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+
+# Plugin configuration
+set -g @resurrect-capture-pane-contents 'on'    # Save pane contents
+set -g @continuum-restore 'on'                  # Auto-restore on start
+set -g @continuum-save-interval '15'            # Auto-save every 15 minutes
+```
+
+### Plugin Management Functions
+Plugin management is handled by `shell/tmux.sh`:
+
+```bash
+# Install TPM and all configured plugins
+install_tmux_plugins()
+
+# Update all plugins to latest versions  
+update_tmux_plugins()
+```
+
+### Plugin Usage Guidelines
+- MUST define plugins in `.tmux.conf` using `set -g @plugin` syntax
+- MUST configure plugin settings before TPM initialization line
+- MUST keep TPM initialization (`run '~/.tmux/plugins/tpm/tpm'`) at file bottom
+- SHOULD use `./dotfiles.sh update` to update plugins rather than manual commands
+
+### Session Persistence Usage
+```bash
+# Manual session management (in tmux)
+Ctrl-a Ctrl-s             # Save current session
+Ctrl-a Ctrl-r             # Restore saved session
+
+# Automatic session management
+# - Sessions auto-save every 15 minutes
+# - Sessions auto-restore when tmux starts
+# - Pane contents preserved across restarts
+```
+
+## Shell Integration Architecture
+
+### Dynamic Path Resolution
+The `tmux.sh` utility script MUST use dynamic path resolution to locate shell functions:
+
+```bash
+# Derive dotfiles directory from script location, resolving symlinks
+SCRIPT_PATH="${BASH_SOURCE[0]:-${(%):-%N}}"
+
+# Resolve symlinks to get real path (critical for stowed files)
+if [[ -L "$SCRIPT_PATH" ]]; then
+    local target="$(readlink "$SCRIPT_PATH")"
+    if [[ "$target" != /* ]]; then
+        SCRIPT_PATH="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)/$target"
+    else
+        SCRIPT_PATH="$target"
+    fi
+fi
+
+TMUX_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+DOTFILES_DIR="$(dirname "$TMUX_DIR")"
+SHELL_DIR="$DOTFILES_DIR/shell"
+```
+
+### Status Line Integration
+```bash
+# Battery status integration via tmux.sh
+set -g status-right '#(~/tmux.sh get_battery_status 2>/dev/null || true)#[fg=white] %H:%M'
+```
+
+**Why tmux.sh is Required:**
+- tmux status commands run in isolated environment without shell functions
+- tmux.sh provides bridge to access shell utilities like `get_battery_status`
+- Dynamic path resolution ensures compatibility across different dotfiles locations
+- NEVER hardcode paths - always derive from script location
 
 This architecture provides a robust, efficient terminal multiplexer configuration that enhances development productivity while maintaining simplicity and performance.
