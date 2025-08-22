@@ -195,3 +195,216 @@ ZSH_PROF=1 zsh -c 'exit'
 ```
 
 This architecture ensures the shell configuration is maintainable, performant, and secure while providing a consistent development experience across all machines.
+
+## Shell Development Patterns
+
+### Path Resolution (Critical)
+
+**NEVER hardcode dotfiles directory paths** - this is a common mistake that breaks the system.
+
+```bash
+# ❌ NEVER hardcode paths (common Claude mistake)
+DOTFILES_DIR="/Users/ian/code/src/github.com/ianlivingstone/dotfiles"
+SHELL_DIR="$DOTFILES_DIR/shell"
+
+# ✅ ALWAYS derive paths dynamically with symlink resolution
+SCRIPT_PATH="${BASH_SOURCE[0]:-${(%):-%N}}"
+
+# Resolve symlinks to get the real path (critical for stowed files)
+if [[ -L "$SCRIPT_PATH" ]]; then
+    local target="$(readlink "$SCRIPT_PATH")"
+    # Handle relative symlinks by making them absolute
+    if [[ "$target" != /* ]]; then
+        SCRIPT_PATH="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)/$target"
+    else
+        SCRIPT_PATH="$target"
+    fi
+fi
+
+COMPONENT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+DOTFILES_DIR="$(dirname "$COMPONENT_DIR")"
+SHELL_DIR="$DOTFILES_DIR/shell"
+
+# ✅ Use utility functions for common operations
+get_shell_dir()          # Portable path resolution with symlinks
+get_xdg_config_dir()     # Consistent XDG directory handling
+```
+
+**Why Dynamic Path Resolution is Required:**
+- GNU Stow creates symlinks from `~/` to actual dotfiles directory
+- Hardcoded paths break when dotfiles location changes between machines
+- Symlink resolution ensures scripts find source files, not symlinked locations
+- Multiple users/environments require path portability
+
+### Config File Loading
+```bash
+# ✅ Standard pattern for loading config files
+while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    line=$(eval echo "$line")  # Expand variables
+    ARRAY+=("$line")
+done < "config-file"
+
+# ✅ Use readarray alternative (compatible with older bash)
+# Never use readarray - not available on all systems
+```
+
+### Environment Variable Caching
+```bash
+# ✅ Session-scoped caching pattern
+if [[ "$DOTFILES_CACHE_VAR" != "1" ]]; then
+    expensive_operation
+    export DOTFILES_CACHE_VAR=1  # Cache for child processes
+fi
+```
+
+### Error Handling & Shell Safety Modes
+```bash
+# ✅ Installation scripts (dotfiles.sh) - STRICT MODE
+#!/usr/bin/env zsh
+set -euo pipefail
+trap 'echo "❌ Error on line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
+
+# ✅ Shell modules (shell/*.sh) - NO set -e (they're sourced)
+#!/usr/bin/env zsh
+# NO set -e! Would kill the shell if sourced
+# Use return instead of exit
+
+# ✅ Safe variable expansion
+"$variable"              # Always quote
+"${variable:-default}"   # With defaults
+[[ -n "${variable:-}" ]] # Safe undefined variable check
+
+# ✅ Safe file operations with proper error handling
+if [[ -f "$file" ]]; then
+    source "$file" || {
+        echo "Failed to source $file" >&2
+        return 1  # return in sourced scripts, exit in executed scripts
+    }
+else
+    echo "Config not found: $file" >&2
+fi
+```
+
+### Strict Mode with External Tools
+```bash  
+# ✅ Handling external tools that are incompatible with strict mode
+# Problem: Tools like GVM have internal scripts that fail with set -euo pipefail
+
+# ✅ Temporary strict mode disable pattern
+handle_external_tool() {
+    # Save current strict mode settings
+    local saved_errexit="" saved_nounset="" saved_pipefail=""
+    [[ $- == *e* ]] && saved_errexit="e"
+    [[ $- == *u* ]] && saved_nounset="u" 
+    [[ $- == *o* ]] && saved_pipefail="o pipefail"
+    
+    # Disable strict mode and error trap
+    set +euo pipefail
+    trap - ERR
+    
+    # Run external tool
+    source "$external_tool_script"
+    external_tool_command --options
+    
+    # Restore strict mode and error trap
+    [[ -n "$saved_errexit" ]] && set -e
+    [[ -n "$saved_nounset" ]] && set -u
+    [[ -n "$saved_pipefail" ]] && set -o pipefail
+    trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
+}
+
+# ❌ Don't try to DRY this up with functions - shell state is context-dependent
+# The inline approach is more reliable than function-based state management
+
+# ✅ Debug output suppression (don't set GVM_DEBUG=0, just redirect stderr)
+if external_tool --command 2>/dev/null; then
+    echo "Success"
+fi
+```
+
+### Shell Safety Mode Guidelines
+
+**For Installation Scripts (`dotfiles.sh`):**
+```bash
+#!/usr/bin/env zsh
+set -euo pipefail  # Strict mode: exit on error, undefined vars, pipe failures
+trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2' ERR
+
+# Installation must fail-fast to prevent partial configuration
+```
+
+**For Shell Modules (`shell/*.sh` - sourced files):**
+```bash
+#!/usr/bin/env zsh
+# NEVER use set -e in sourced scripts - would kill the shell!
+# Use graceful error handling instead
+
+# ✅ Graceful degradation pattern
+load_optional_tool() {
+    if command -v tool &>/dev/null; then
+        setup_tool
+        return 0
+    else
+        show_warning "Tool not available, skipping"
+        return 1  # Use return, not exit!
+    fi
+}
+```
+
+**For Main Shell RC (`.zshrc`):**
+```bash
+# ✅ Validation with safe exit (current pattern is excellent)
+if ! source "$SHELL_DIR/security.sh" || ! validate_key_security; then
+    echo "🚨 Security validation failed"
+    return 1  # return kills script loading, not shell
+fi
+```
+
+## Zsh Compatibility Issues  
+```bash
+# ❌ Bash-style array expansion (fails in zsh)
+for i in "${!array[@]}"; do          # "bad substitution" error in zsh
+    echo "${array[$((i+1))]}"        # 0-based indexing assumption
+done
+
+# ✅ Zsh-compatible array iteration
+local i=1
+for item in "${array[@]}"; do        # Direct iteration, no index expansion
+    echo "$i. $item"
+    ((i++))
+done
+
+# ❌ Bash-style comma splitting (fails in zsh)
+IFS=',' read -ra items <<< "$input"  # "bad option: -a" in zsh
+
+# ✅ Zsh-specific array splitting  
+local items_array=(${(s:,:)input})   # Zsh parameter expansion flags
+for item in "${items_array[@]}"; do
+    # Process each item
+done
+
+# ❌ Bash array indexing (off-by-one in zsh)
+array[0]="first"                     # 0-based in bash
+selected_item="${array[$((index-1))]}" # Wrong in zsh
+
+# ✅ Zsh array indexing (1-based by default)  
+array[1]="first"                     # 1-based in zsh
+selected_item="${array[$index]}"     # Direct index, no subtraction needed
+
+# ✅ Arithmetic expressions in strict mode
+# ❌ Problematic:
+((count++))                          # Can fail with "operator expected at '0'"
+
+# ✅ Safe alternatives:
+count=$((count + 1))                 # Explicit arithmetic
+[[ -n "${count:-}" ]] && count=$((count + 1)) # With undefined variable check
+```
+
+### Shell Compatibility Rules
+- **Never use `readarray`** - not available on all systems
+- **Test zsh-specific features** - arrays, parameter expansion, globbing differ
+- **Use `[[ ]]` instead of `[ ]`** for conditionals
+- **Quote all variables**: `"$var"` not `$var`
+- **Use portable shebang**: `#!/usr/bin/env zsh`
+- **Understand array indexing**: zsh is 1-based, bash is 0-based
