@@ -22,7 +22,7 @@ The tmux package provides a modern terminal multiplexer configuration optimized 
 tmux/
 ├── .tmux.conf             # Main tmux configuration (symlinked to ~/.tmux.conf)
 ├── tmux.sh                # Utility script for shell function access (symlinked to ~/tmux.sh)
-└── agent.md               # This architecture documentation
+└── AGENTS.md               # This architecture documentation
 ```
 
 ### Core Configuration Sections
@@ -370,7 +370,7 @@ man tmux                                # Check feature availability
 - Maintain performance considerations
 
 **3. Document changes:**
-- Update this agent.md file
+- Update this AGENTS.md file
 - Add comments for complex configurations
 - Test across different tmux versions
 

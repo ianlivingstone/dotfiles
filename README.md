@@ -120,6 +120,27 @@ This setup uses [lazy.nvim](https://lazy.folke.io/) with controlled updates:
 - You control when to update with `:Lazy sync` (recommended) or `:Lazy update`
 - The lockfile is committed to git, ensuring consistent plugin versions across machines
 
+#### **Claude Code Integration**
+Seamless integration with Claude Code AI assistant using [claude-code.nvim](https://github.com/greggh/claude-code.nvim):
+
+```bash
+# Start Claude Code from within Neovim
+:ClaudeCode                # Open Claude Code terminal
+:ClaudeCodeToggle          # Toggle Claude Code window
+:ClaudeCodeContinue        # Continue previous conversation
+:ClaudeCodeResume          # Resume with conversation history
+
+# File explorer integration
+<Space>e                   # Toggle file explorer (nvim-tree)
+```
+
+**Features:**
+- **Automatic file reload**: Files modified by Claude Code are automatically reloaded
+- **Terminal integration**: Claude Code runs in a dedicated terminal window
+- **Git integration**: Detects project root and maintains context
+- **Conversation management**: Continue and resume previous Claude Code sessions
+- **Window management**: Configurable split positioning and sizing
+
 #### **Tmux Session Persistence**
 Sessions automatically save/restore using tmux-resurrect and tmux-continuum:
 
@@ -279,5 +300,10 @@ This ensures the status reflects exactly what Stow would do, with no guesswork.
 - **Stow-validated**: Status uses Stow's own validation logic  
 - **Flexible targets**: Each package can go to a different location
 - **Zero duplication**: Add once in config, works everywhere
+
+## 🛠️ Development Tools
+
+### 🔗 **Claude Code Integration**
+Custom Rust hooks automatically enhance your workflow (whitespace cleanup, formatting, etc.). Built with `./claude_hooks/build-hooks.sh` from modular hook crates in `claude_hooks/hooks/`.
 
 The separation between shared and machine-specific configuration means you can safely share your fork while keeping personal data private.

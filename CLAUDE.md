@@ -17,7 +17,7 @@ This CLAUDE.md focuses on bash-specific development guidance and conventions fol
 - **Shell**: Zsh with modular configuration
 - **Security**: GPG signing required, SSH key validation
 - **Version Management**: Centralized in `versions.config` with validation
-- **Architecture**: Distributed documentation in per-directory `agent.md` files
+- **Architecture**: Distributed documentation in per-directory `AGENTS.md` files
 
 ## Key Commands for Development
 
@@ -706,19 +706,19 @@ This project uses **distributed architecture documentation** following Agent Rul
 ├── AGENTS.md                   # Agent Rules compliant quick reference
 ├── ARCHITECTURE.md             # High-level project architecture (Agent Rules format)
 ├── CLAUDE.md                   # Claude-specific guidelines (Agent Rules format)
-├── shell/agent.md              # Shell configuration architecture
-├── nvim/agent.md               # Neovim configuration architecture  
-├── git/agent.md                # Git configuration architecture
-├── ssh/agent.md                # SSH configuration architecture
-├── tmux/agent.md               # Tmux configuration architecture
-└── [component]/agent.md        # Component-specific architecture
+├── shell/AGENTS.md              # Shell configuration architecture
+├── nvim/AGENTS.md               # Neovim configuration architecture  
+├── git/AGENTS.md                # Git configuration architecture
+├── ssh/AGENTS.md                # SSH configuration architecture
+├── tmux/AGENTS.md               # Tmux configuration architecture
+└── [component]/AGENTS.md        # Component-specific architecture
 ```
 
 ### Documentation Maintenance Rules
 
 #### When Making Changes
-- MUST update the component's `agent.md` file when modifying that component
-- MUST update integration sections in related component `agent.md` files for cross-component changes
+- MUST update the component's `AGENTS.md` file when modifying that component
+- MUST update integration sections in related component `AGENTS.md` files for cross-component changes
 - MUST update `ARCHITECTURE.md` for high-level architectural changes
 - MUST verify all documentation links still work after changes
 - SHOULD include code examples that follow established patterns
@@ -797,52 +797,82 @@ trap 'echo "❌ Error on line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
 
 ## Claude Code Configuration Management
 
-### .claude_code File Guidelines
+### .claude/settings.json Configuration
 
-**MUST include in .claude_code:**
-- Safe read-only tools (Read, Grep, Glob, LS, TodoWrite)
-- Safe bash commands (ls, pwd, cd, cat, head, tail, which, command)
-- Read-only git commands (status, log, diff, show, branch)
-- Read-only system commands (version checks, list operations)
-- Repository-specific utilities (./dotfiles.sh status, ~/tmux.sh get_battery_status)
-- Generic patterns that work across all machines and users
+Use `.claude/settings.json` for all Claude Code configuration including permissions and hooks.
 
-**NEVER include in .claude_code:**
-- Destructive commands (rm, mv with overwrite potential, chmod)
-- Write operations (git commit, git push, package installs)
-- System modification commands (sudo operations, system configs)
-- User-specific or machine-specific paths
+**MUST include in permissions.allow:**
+- Safe read-only tools (tool:Read, tool:Grep, tool:Glob, tool:LS, tool:TodoWrite)
+- Safe bash commands (bash:ls, bash:pwd, bash:cd, bash:cat, bash:head, bash:tail)
+- Read-only git commands (bash:git status, bash:git log, bash:git diff)
+- Read-only system commands (bash:npm --version, bash:brew list)
+- Repository-specific utilities (bash:./dotfiles.sh status, bash:~/tmux.sh get_battery_status)
+
+**NEVER include in permissions.allow:**
+- Destructive commands (bash:rm, bash:mv, bash:chmod)
+- Write operations (bash:git commit, bash:git push, bash:npm install)
+- System modification commands (bash:sudo *, bash:brew install)
 - Commands that modify state without explicit user consent
 
-**Example safe .claude_code structure:**
+**Example safe .claude/settings.json structure:**
 ```json
 {
-  "trusted_tools": ["Read", "Grep", "Glob", "LS", "TodoWrite"],
-  "trusted_bash_commands": [
-    "git status", "git log", "git diff",
-    "tmux list-*", "tmux show-*", 
-    "./dotfiles.sh status",
-    "npm --version", "brew list"
-  ],
-  "repository_context": {
-    "description": "Generic project description",
-    "build_commands": ["safe build commands"],
-    "test_commands": ["safe test commands"]
+  "permissions": {
+    "allow": [
+      "tool:Read", "tool:Grep", "tool:Glob", "tool:LS", "tool:TodoWrite",
+      "bash:git status", "bash:git log", "bash:git diff",
+      "bash:tmux list-*", "bash:tmux show-*",
+      "bash:./dotfiles.sh status",
+      "bash:npm --version", "bash:brew list"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f \"$FILE_PATH\" ] && sed -i '' 's/[[:space:]]*$//' \"$FILE_PATH\" || true"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
 
+**Hook Guidelines:**
+- MUST use PostToolUse hooks for automatic cleanup (whitespace removal, formatting)
+- MUST include file existence checks in hook commands
+- MUST use safe command patterns that won't fail the hook system
+- SHOULD add hooks for common code quality improvements (linting, formatting)
+- NEVER add hooks that could corrupt files or cause data loss
+
 **Maintenance Guidelines:**
-- MUST update .claude_code when adding new safe utility scripts
-- MUST review trusted commands periodically for security
-- SHOULD commit .claude_code to share convenience with other users (if all entries are safe)
-- NEVER add commands that could cause data loss or security issues
-- MUST test .claude_code changes with fresh Claude sessions
+- MUST update .claude/settings.json when adding new safe utility scripts
+- MUST review permissions periodically for security
+- SHOULD commit .claude/settings.json to share convenience with other users (if all entries are safe)
+- NEVER add permissions for commands that could cause data loss or security issues
+- MUST test .claude/settings.json changes with fresh Claude sessions
 
 **Security Review Process:**
-- MUST verify all trusted commands are truly read-only
+- MUST verify all allowed commands are truly read-only or safe
 - MUST ensure no user-specific paths or credentials are included
-- MUST test that malicious arguments cannot cause harm via trusted commands
-- SHOULD periodically audit trusted command list for security implications
+- MUST test that malicious arguments cannot cause harm via allowed commands
+- SHOULD periodically audit permission list for security implications
+- MUST validate hook commands cannot be exploited or cause system damage
+
+## Claude Code Hooks Integration
+
+For Claude Code hook development and architecture:
+
+- **🏗️ Architecture**: See `claude_hooks/AGENTS.md` for development rules
+- **🔧 Status**: Use `./dotfiles.sh status` to check hook build status
+
+**Quick Reference:**
+- Build hooks: `./claude_hooks/build-hooks.sh`
+- Hook config: `.claude/settings.json` (already configured)
+- Hook output: Visible in Claude Code transcript (Ctrl+R)
 
 This project prioritizes security, performance, and maintainability in a bash/macOS environment using GNU Stow for configuration management.

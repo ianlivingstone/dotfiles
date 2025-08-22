@@ -474,8 +474,21 @@ EOF
             echo "    IdentityFile $key" >> "$ssh_config"
         done
         echo "    IdentitiesOnly yes" >> "$ssh_config"
+        echo "    UseKeychain yes" >> "$ssh_config"
+        echo "    AddKeysToAgent yes" >> "$ssh_config"
         echo "" >> "$ssh_config"
         echo -e "${GREEN}✅ SSH key configuration saved${NC}"
+        
+        # Add encrypted keys to keychain
+        echo ""
+        echo -e "${BLUE}🔐 Setting up SSH keychain integration...${NC}"
+        for key in "${SSH_SELECTED_KEYS[@]}"; do
+            if is_ssh_key_encrypted "$key"; then
+                add_ssh_key_to_keychain "$key" || true
+            else
+                echo "⚠️  Key $(basename "$key") is not encrypted, keychain not needed"
+            fi
+        done
     else
         echo "# No SSH keys selected" >> "$ssh_config"
     fi
@@ -609,6 +622,10 @@ install_dotfiles() {
     echo ""
     echo -e "${GREEN}✅ Dotfiles installation complete!${NC}"
     
+    # Build Claude Code hooks
+    echo ""
+    build_hooks
+    
     # Update development environment versions
     echo ""
     update_environment
@@ -625,6 +642,21 @@ uninstall_dotfiles() {
         echo -e "${RED}❌ GNU Stow is not installed. Cannot uninstall.${NC}"
         exit 1
     fi
+    
+    # Remove SSH keys from keychain before unstowing
+    echo -e "${BLUE}🔐 Removing SSH keys from macOS Keychain...${NC}"
+    local xdg_config="$(get_xdg_config_dir)"
+    if [[ -f "$xdg_config/ssh/machine.config" ]]; then
+        grep "IdentityFile" "$xdg_config/ssh/machine.config" | while read -r line; do
+            local key_path=$(echo "$line" | awk '{print $2}' | sed "s|~|$HOME|")
+            if [[ -f "$key_path" ]]; then
+                remove_ssh_key_from_keychain "$key_path" || true
+            fi
+        done
+    else
+        echo "⚠️  No SSH configuration found, skipping keychain cleanup"
+    fi
+    echo ""
     
     # Change to dotfiles directory
     cd "$DOTFILES_DIR"
@@ -718,6 +750,103 @@ show_status() {
     
     # Call the unified status function
     dotfiles_status
+    
+    echo ""
+    
+    # Show hooks status
+    show_hooks_status
+}
+
+show_hooks_status() {
+    local hooks_dir="$DOTFILES_DIR/claude_hooks"
+    local bin_dir="$hooks_dir/bin"
+    local src_dir="$hooks_dir/hooks"
+    
+    echo -e "${BLUE}🪝 Claude Code Hooks Status:${NC}"
+    
+    # Check if hooks directory exists
+    if [[ ! -d "$hooks_dir" ]]; then
+        echo -e "  ${YELLOW}⚠️  No claude_hooks directory found${NC}"
+        return 0
+    fi
+    
+    # Check build script
+    if [[ ! -x "$hooks_dir/build-hooks.sh" ]]; then
+        echo -e "  ${RED}❌ build-hooks.sh missing or not executable${NC}"
+        return 1
+    fi
+    
+    # Check source directory
+    if [[ ! -d "$src_dir" ]]; then
+        echo -e "  ${YELLOW}⚠️  No hooks directory found${NC}"
+        return 0
+    fi
+    
+    # Check each hook
+    local hooks_found=false
+    for hook_dir in "$src_dir"/*; do
+        if [[ -d "$hook_dir" ]]; then
+            hooks_found=true
+            local hook_name=$(basename "$hook_dir")
+            local binary_path="$bin_dir/$hook_name"
+            
+            if [[ -x "$binary_path" ]]; then
+                # Check if source is newer than binary
+                local newest_src=$(find "$hook_dir" -type f -newer "$binary_path" 2>/dev/null | head -1)
+                if [[ -n "$newest_src" ]]; then
+                    echo -e "  ${YELLOW}⚠️  $hook_name → needs rebuild (source changed)${NC}"
+                else
+                    echo -e "  ${GREEN}✅ $hook_name → built and up to date${NC}"
+                fi
+            else
+                echo -e "  ${RED}❌ $hook_name → binary not found${NC}"
+            fi
+        fi
+    done
+    
+    if [[ "$hooks_found" == "false" ]]; then
+        echo -e "  ${YELLOW}⚠️  No hooks found in hooks/ directory${NC}"
+    fi
+}
+
+build_hooks() {
+    local hooks_dir="$DOTFILES_DIR/claude_hooks"
+    local bin_dir="$hooks_dir/bin"
+    local src_dir="$hooks_dir/hooks"
+    
+    # Skip if no hooks directory
+    if [[ ! -d "$hooks_dir" ]]; then
+        return 0
+    fi
+    
+    # Check if build is needed
+    local needs_build=false
+    
+    # Check if bin directory exists
+    if [[ ! -d "$bin_dir" ]]; then
+        needs_build=true
+    else
+        # Check if source is newer than binaries
+        if [[ -d "$src_dir" ]]; then
+            local newest_src=$(find "$src_dir" -type f -newer "$bin_dir" 2>/dev/null | head -1)
+            if [[ -n "$newest_src" ]]; then
+                needs_build=true
+            fi
+        fi
+    fi
+    
+    # Build if needed
+    if [[ "$needs_build" == "true" ]]; then
+        echo -e "${BLUE}🔧 Building Claude Code hooks...${NC}"
+        
+        if [[ -x "$hooks_dir/build-hooks.sh" ]]; then
+            "$hooks_dir/build-hooks.sh"
+        else
+            echo -e "${YELLOW}⚠️  build-hooks.sh not found or not executable${NC}"
+        fi
+    else
+        echo -e "${GREEN}✅ Claude Code hooks are up to date${NC}"
+    fi
 }
 
 update_environment() {
@@ -819,6 +948,11 @@ update_environment() {
     # Update tmux plugins
     source "$DOTFILES_DIR/shell/tmux.sh"
     update_tmux_plugins
+    
+    echo ""
+    
+    # Build Claude Code hooks
+    build_hooks
     
     # Clean up update mode
     unset DOTFILES_UPDATE_MODE

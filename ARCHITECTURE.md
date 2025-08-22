@@ -4,7 +4,7 @@ This document outlines the high-level design principles and organizational struc
 
 **📋 Agent Rules Compliance**: This file follows Agent Rules specification using imperative statements with RFC 2119 keywords (MUST, SHOULD, MAY, NEVER) and flat bullet list format for AI coding agents.
 
-For detailed architecture of specific components, see the `agent.md` files in each directory.
+For detailed architecture of specific components, see the `AGENTS.md` files in each directory.
 
 ## Design Principles
 
@@ -40,16 +40,21 @@ For detailed architecture of specific components, see the `agent.md` files in ea
 ```
 dotfiles/                           # Git repository (shareable)
 ├── shell/                          # Zsh configuration
-│   └── agent.md                    # Shell architecture documentation
+│   └── AGENTS.md                    # Shell architecture documentation
 ├── git/                           # Base Git config + includes
-│   └── agent.md                   # Git architecture documentation
+│   └── AGENTS.md                   # Git architecture documentation
 ├── ssh/                           # Base SSH config + includes
-│   └── agent.md                   # SSH architecture documentation
+│   └── AGENTS.md                   # SSH architecture documentation
 ├── tmux/                          # Terminal multiplexer
-│   └── agent.md                   # Tmux architecture documentation
+│   └── AGENTS.md                   # Tmux architecture documentation
 ├── nvim/                          # Neovim configuration
-│   └── agent.md                   # Neovim architecture documentation
+│   └── AGENTS.md                   # Neovim architecture documentation
 ├── misc/                          # Starship prompt, colors
+├── claude_hooks/                  # Claude Code integration hooks
+│   ├── bin/                       # Compiled hook binaries
+│   ├── hooks/                     # Individual hook source code  
+│   │   └── whitespace-cleaner/    # Whitespace cleanup hook
+│   └── build-hooks.sh             # Hook build script
 ├── packages.config                # Package list for GNU Stow
 ├── versions.config                # Centralized version requirements
 ├── dotfiles.sh                    # Installation & management script
@@ -110,33 +115,33 @@ nvim:$XDG_CONFIG_DIR/nvim             # Custom target: ~/.config/nvim/
 
 ## Directory-Specific Architecture
 
-Each major component has detailed architecture documentation in its respective `agent.md` file:
+Each major component has detailed architecture documentation in its respective `AGENTS.md` file:
 
-### 📁 **[shell/agent.md](shell/agent.md)**
+### 📁 **[shell/AGENTS.md](shell/AGENTS.md)**
 - Modular Zsh configuration system
 - Performance-optimized shell startup
 - Version manager integration (NVM, GVM, Rustup)
 - Security validation and agent management
 
-### 📁 **[nvim/agent.md](nvim/agent.md)**  
+### 📁 **[nvim/AGENTS.md](nvim/AGENTS.md)**  
 - Lazy-loaded plugin architecture
 - Language Server Protocol integration
 - Modular configuration with graceful degradation
 - Plugin management with version locking
 
-### 📁 **[git/agent.md](git/agent.md)**
+### 📁 **[git/AGENTS.md](git/AGENTS.md)**
 - Layered configuration using native Git includes
 - Machine-specific user information management
 - Required GPG signing enforcement
 - Multi-machine identity separation
 
-### 📁 **[ssh/agent.md](ssh/agent.md)**
+### 📁 **[ssh/AGENTS.md](ssh/AGENTS.md)**
 - Modern SSH security configuration
 - Connection multiplexing and optimization
 - Machine-specific identity file management
 - Secure defaults and cryptographic settings
 
-### 📁 **[tmux/agent.md](tmux/agent.md)**
+### 📁 **[tmux/AGENTS.md](tmux/AGENTS.md)**
 - Development-focused terminal multiplexer setup
 - Vi-style key bindings and navigation
 - Visual enhancements and status line configuration
@@ -171,9 +176,9 @@ The installer validates and guides installation of all required tools:
 ## Development Guidelines
 
 ### Architecture Documentation Maintenance
-Each component directory contains an `agent.md` file with detailed architecture documentation:
+Each component directory contains an `AGENTS.md` file with detailed architecture documentation:
 
-- MUST update `agent.md` when making changes to that component
+- MUST update `AGENTS.md` when making changes to that component
 - MUST include code examples and configuration patterns
 - MUST document why certain architectural choices were made
 - MUST document how the component integrates with others
@@ -182,13 +187,13 @@ Each component directory contains an `agent.md` file with detailed architecture 
 ### Adding New Components
 - MUST create package directory with configuration files
 - MUST add to `packages.config` with appropriate target
-- MUST create `agent.md` documenting the component's architecture following Agent Rules format
+- MUST create `AGENTS.md` documenting the component's architecture following Agent Rules format
 - SHOULD update version requirements in `versions.config` if needed
 - MUST test installation and status checking
 
 ### Modifying Existing Components
 - MUST update the component files and configuration
-- MUST update `agent.md` to reflect architectural changes
+- MUST update `AGENTS.md` to reflect architectural changes
 - MUST update version requirements if dependencies change
 - MUST test compatibility across different environments
 - MUST update integration points in other components if needed
@@ -226,4 +231,4 @@ Personal Laptop:
 
 This architecture demonstrates how proper separation of concerns, distributed documentation, and configuration-driven management create a robust, maintainable system that scales from individual use to team adoption while maintaining security and performance.
 
-For detailed information about any specific component, refer to the `agent.md` file in that component's directory.
+For detailed information about any specific component, refer to the `AGENTS.md` file in that component's directory.

@@ -7,6 +7,26 @@ if not lazy_available then
 end
 
 M.plugins = {
+  -- Claude Code integration
+  {
+    "greggh/claude-code.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    config = function()
+      local ok, claude_code = pcall(require, "claude-code")
+      if not ok then
+        vim.notify("Failed to load claude-code", vim.log.levels.ERROR)
+        return
+      end
+      claude_code.setup({
+        -- Default configuration
+        window = {
+          split = "right",
+          size = 80,
+        },
+      })
+    end,
+  },
+
   -- File explorer
   {
     "nvim-tree/nvim-tree.lua",
@@ -28,6 +48,9 @@ M.plugins = {
             
             -- Change to the directory
             vim.cmd.cd(data.file)
+            
+            -- Force load nvim-tree plugin before using it
+            require("lazy").load({ plugins = { "nvim-tree.lua" } })
             
             -- Open nvim-tree
             require("nvim-tree.api").tree.open()

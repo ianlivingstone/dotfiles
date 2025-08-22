@@ -248,3 +248,128 @@ get_battery_status() {
     echo "$battery_display" > "$cache_file"
     echo "$battery_display"
 }
+
+# Detect if SSH key is encrypted without triggering password prompt
+# Usage: is_ssh_key_encrypted /path/to/key
+is_ssh_key_encrypted() {
+    local key_path="$1"
+    
+    [[ ! -f "$key_path" ]] && return 1
+    [[ "$key_path" == *.pub ]] && return 1  # Skip public keys
+    
+    # Check if key file contains encryption headers
+    if grep -q "ENCRYPTED\|Proc-Type.*ENCRYPTED" "$key_path" 2>/dev/null; then
+        return 0  # Encrypted
+    fi
+    
+    # For OpenSSH format, check if it contains bcrypt/aes markers
+    if grep -q "openssh-key-v1" "$key_path" 2>/dev/null; then
+        # Try to detect encryption by looking for key material patterns
+        # Non-encrypted OpenSSH keys have predictable patterns
+        if [[ $(wc -l < "$key_path") -gt 10 ]] && grep -q "bcrypt\|aes" "$key_path" 2>/dev/null; then
+            return 0  # Likely encrypted
+        fi
+    fi
+    
+    return 1  # Not encrypted
+}
+
+# Check if SSH key is already loaded in SSH agent
+# Usage: is_ssh_key_loaded /path/to/key
+is_ssh_key_loaded() {
+    local key_path="$1"
+    
+    # Check if SSH agent is running
+    [[ -z "$SSH_AUTH_SOCK" ]] && return 1
+    
+    # Get public key fingerprint
+    local fingerprint
+    fingerprint=$(ssh-keygen -lf "$key_path" 2>/dev/null | awk '{print $2}') || return 1
+    
+    # Check if fingerprint is in loaded keys
+    ssh-add -l 2>/dev/null | grep -q "$fingerprint"
+}
+
+# Add SSH key to macOS Keychain (one-time setup)
+# Usage: add_ssh_key_to_keychain /path/to/key
+add_ssh_key_to_keychain() {
+    local key_path="$1"
+    
+    [[ ! -f "$key_path" ]] && return 1
+    [[ "$key_path" == *.pub ]] && return 1  # Skip public keys
+    
+    # Only add if key is encrypted
+    if ! is_ssh_key_encrypted "$key_path"; then
+        echo "⚠️  Key $key_path is not encrypted, skipping keychain integration"
+        return 1
+    fi
+    
+    echo "🔐 Adding SSH key to macOS Keychain: $(basename "$key_path")"
+    echo "💡 You'll be prompted for your SSH key passphrase once to save it to Keychain"
+    
+    # Add to agent and keychain
+    if ssh-add --apple-use-keychain "$key_path"; then
+        echo "✅ SSH key added to Keychain successfully"
+        return 0
+    else
+        echo "❌ Failed to add SSH key to Keychain"
+        return 1
+    fi
+}
+
+# Remove SSH key from macOS Keychain
+# Usage: remove_ssh_key_from_keychain /path/to/key  
+remove_ssh_key_from_keychain() {
+    local key_path="$1"
+    
+    [[ ! -f "$key_path" ]] && return 1
+    [[ "$key_path" == *.pub ]] && return 1  # Skip public keys
+    
+    echo "🗑️  Removing SSH key from Keychain: $(basename "$key_path")"
+    
+    # Remove from agent (also removes from keychain)
+    if ssh-add -d "$key_path" 2>/dev/null; then
+        echo "✅ SSH key removed from Keychain successfully"
+        return 0
+    else
+        echo "⚠️  SSH key may not have been in agent/keychain"
+        return 0  # Not necessarily an error
+    fi
+}
+
+# Lazy load SSH key (checks if needed, loads from keychain if available)
+# Usage: lazy_load_ssh_key /path/to/key
+lazy_load_ssh_key() {
+    local key_path="$1"
+    
+    [[ ! -f "$key_path" ]] && return 1
+    [[ "$key_path" == *.pub ]] && return 1  # Skip public keys
+    
+    # Skip if already loaded
+    if is_ssh_key_loaded "$key_path"; then
+        return 0
+    fi
+    
+    # If key is encrypted, try loading from keychain
+    if is_ssh_key_encrypted "$key_path"; then
+        # Try to load from keychain silently
+        if ssh-add --apple-load-keychain 2>/dev/null; then
+            # Check if our key is now loaded
+            if is_ssh_key_loaded "$key_path"; then
+                return 0
+            fi
+        fi
+        
+        # Key not in keychain, skip to avoid password prompt during shell startup
+        echo "💡 SSH key $(basename "$key_path") requires setup - run: ssh-add --apple-use-keychain $key_path"
+        return 1
+    else
+        # Key is not encrypted, add directly
+        if ssh-add "$key_path" 2>/dev/null; then
+            return 0
+        else
+            echo "❌ Failed to load unencrypted SSH key: $(basename "$key_path")"
+            return 1
+        fi
+    fi
+}

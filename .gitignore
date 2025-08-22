@@ -9,8 +9,8 @@ nvim/.config/nvim/*.backup
 *.local
 *.machine
 
-# Claude settings (local development)
-.claude/
+# Claude Code local settings (but not shared settings.json)
+.claude/settings.local.json
 
 # Common editor temporary files
 .DS_Store
@@ -20,6 +20,12 @@ nvim/.config/nvim/*.backup
 
 # Node.js
 **/node_modules/
+
+# Rust build artifacts
+**/target/
+
+# Built binaries (hooks get built to claude_hooks/bin/)
+claude_hooks/bin/
 
 # Any accidentally created machine configs in wrong location
 **/machine.config

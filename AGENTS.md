@@ -1,6 +1,6 @@
 # AI Agent Rules for Dotfiles Project
 
-**📋 Agent Rules Specification Compliance**: This file follows the Agent Rules specification for AI coding agents. All AI guidance files in this project (AGENTS.md, CLAUDE.md, ARCHITECTURE.md, and component agent.md files) MUST follow Agent Rules format.
+**📋 Agent Rules Specification Compliance**: This file follows the Agent Rules specification for AI coding agents. All AI guidance files in this project (AGENTS.md, CLAUDE.md, ARCHITECTURE.md, and component AGENTS.md files) MUST follow Agent Rules format.
 
 **🤖 Agent Support**: This project provides first-class support for Claude Code with compatibility for other Agent Rules compliant AI coding assistants.
 
@@ -16,7 +16,7 @@
 - [`CLAUDE.md`](CLAUDE.md) - Complete project context, bash patterns, security guidelines
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) - Project structure and component relationships
 - [`versions.config`](versions.config) - Tool version requirements
-- Component `agent.md` files before modifying that component
+- Component `AGENTS.md` files before modifying that component
 
 ### MUST Follow Security Patterns  
 - All commits and tags MUST be GPG signed
@@ -31,8 +31,8 @@
 - Configuration layering: shared in git, machine-specific in `~/.config/`
 
 ### MUST Update Documentation
-- Read existing component `agent.md` files to understand current patterns before changes
-- Update component's `agent.md` file when modifying that component
+- Read existing component `AGENTS.md` files to understand current patterns before changes
+- Update component's `AGENTS.md` file when modifying that component
 - Update `ARCHITECTURE.md` for high-level architectural changes
 - Keep documentation current with code changes
 
@@ -47,12 +47,12 @@
 - Bypass security patterns documented in `CLAUDE.md`
 
 ## Component Architecture
-Each directory has detailed architecture in its `agent.md` file:
-- [`shell/agent.md`](shell/agent.md) - Shell configuration architecture
-- [`nvim/agent.md`](nvim/agent.md) - Neovim configuration architecture  
-- [`git/agent.md`](git/agent.md) - Git configuration architecture
-- [`ssh/agent.md`](ssh/agent.md) - SSH configuration architecture
-- [`tmux/agent.md`](tmux/agent.md) - Tmux configuration architecture
+Each directory has detailed architecture in its `AGENTS.md` file:
+- [`shell/AGENTS.md`](shell/AGENTS.md) - Shell configuration architecture
+- [`nvim/AGENTS.md`](nvim/AGENTS.md) - Neovim configuration architecture  
+- [`git/AGENTS.md`](git/AGENTS.md) - Git configuration architecture
+- [`ssh/AGENTS.md`](ssh/AGENTS.md) - SSH configuration architecture
+- [`tmux/AGENTS.md`](tmux/AGENTS.md) - Tmux configuration architecture
 
 ## Agent Rules Format Requirements
 All AI guidance files in this project MUST follow Agent Rules specification:

@@ -37,11 +37,12 @@ start_ssh_agent() {
     # Load SSH keys from machine-specific config if available
     local xdg_config="$(get_xdg_config_dir)"
     if [[ -f "$xdg_config/ssh/machine.config" ]]; then
-        # Extract IdentityFile paths and add them (keys already validated by security.sh)
+        # Extract IdentityFile paths and lazy-load them
         grep "IdentityFile" "$xdg_config/ssh/machine.config" | while read -r line; do
             local key_path=$(echo "$line" | awk '{print $2}' | sed "s|~|$HOME|")
             if [[ -f "$key_path" ]]; then
-                ssh-add "$key_path" &>/dev/null
+                # Use lazy loading - won't prompt for passwords during shell startup
+                lazy_load_ssh_key "$key_path" || true
             fi
         done
     fi
