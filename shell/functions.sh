@@ -398,11 +398,12 @@ validate_security_permissions() {
         fi
     done
     
-    # Check and fix all ~/.config subdirectories to be user-only accessible
-    if [[ -d "$HOME/.config" ]]; then
-        find "$HOME/.config" -type d -not -perm 700 2>/dev/null | while read -r config_dir; do
-            if [[ -n "$config_dir" ]]; then
-                local perms=$(stat -f %A "$config_dir" 2>/dev/null || stat -c %a "$config_dir" 2>/dev/null || echo "unknown")
+    # Check and fix only managed ~/.config subdirectories to be user-only accessible
+    local managed_config_dirs=("$HOME/.config/git" "$HOME/.config/ssh" "$HOME/.config/gpg" "$HOME/.config/nvim")
+    for config_dir in "${managed_config_dirs[@]}"; do
+        if [[ -d "$config_dir" ]]; then
+            local perms=$(stat -f %A "$config_dir" 2>/dev/null || stat -c %a "$config_dir" 2>/dev/null || echo "unknown")
+            if [[ "$perms" != "700" ]]; then
                 if [[ "$auto_fix" == "true" ]]; then
                     if chmod 700 "$config_dir" 2>/dev/null; then
                         fixed_issues+=("$config_dir ($perms → 700)")
@@ -413,8 +414,8 @@ validate_security_permissions() {
                     security_issues+=("Directory $config_dir has permissions $perms (should be 700)")
                 fi
             fi
-        done
-    fi
+        fi
+    done
     
     # Output results based on mode
     if [[ "$quiet" == "false" ]]; then
