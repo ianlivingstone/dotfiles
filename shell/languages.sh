@@ -28,3 +28,10 @@ if [[ -f "$SHELL_DIR/nvm.sh" ]]; then
 else
     echo "⚠️  NVM module not found at: $SHELL_DIR/nvm.sh"
 fi
+
+# Setup Python/uv (using dedicated uv module)
+if [[ -f "$SHELL_DIR/uv.sh" ]]; then
+    source "$SHELL_DIR/uv.sh"
+else
+    echo "⚠️  uv module not found at: $SHELL_DIR/uv.sh"
+fi

@@ -92,7 +92,11 @@ check_dependencies() {
     if ! command -v brew &> /dev/null; then
         missing_deps+=("brew")
     fi
-    
+
+    if ! command -v just &> /dev/null; then
+        missing_deps+=("just")
+    fi
+
     if ! command -v nvim &> /dev/null; then
         missing_deps+=("nvim")
     fi
@@ -100,7 +104,9 @@ check_dependencies() {
     if ! command -v tmux &> /dev/null; then
         missing_deps+=("tmux")
     fi
-    
+
+    # Note: Python is managed by uv (checked in shell/uv.sh module)
+
     # Check for development environment managers
     if ! command -v nvm &> /dev/null && [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
         missing_deps+=("nvm")
@@ -113,7 +119,11 @@ check_dependencies() {
     if ! command -v rustup &> /dev/null; then
         missing_deps+=("rustup")
     fi
-    
+
+    if ! command -v uv &> /dev/null; then
+        missing_deps+=("uv")
+    fi
+
     # Check for security tools
     if ! command -v gpg &> /dev/null; then
         missing_deps+=("gpg")
@@ -165,6 +175,9 @@ check_dependencies() {
                 "brew")
                     echo -e "  ${RED}•${NC} Homebrew: /bin/bash -c \"\$($SECURE_CURL -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
                     ;;
+                "just")
+                    echo -e "  ${RED}•${NC} just: brew install just"
+                    ;;
                 "nvim")
                     echo -e "  ${RED}•${NC} Neovim: brew install neovim"
                     ;;
@@ -179,6 +192,9 @@ check_dependencies() {
                     ;;
                 "rustup")
                     echo -e "  ${RED}•${NC} Rustup: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+                    ;;
+                "uv")
+                    echo -e "  ${RED}•${NC} uv: curl -LsSf https://astral.sh/uv/install.sh | sh"
                     ;;
                 "gpg")
                     echo -e "  ${RED}•${NC} GnuPG: brew install gnupg"
@@ -721,11 +737,11 @@ show_status() {
     local saved_options="$-"
     set +euo pipefail
     trap - ERR
-    
+
     # Set up environment variables the same way .zshrc does
     export XDG_CONFIG_DIR="$(get_xdg_config_dir)"
     export SHELL_DIR="$DOTFILES_DIR/shell"
-    
+
     # Load NVM if not already available and cache the result
     if [[ "${DOTFILES_NVM_LOADED:-}" != "1" ]]; then
         if command -v nvm &>/dev/null; then
@@ -736,7 +752,12 @@ show_status() {
             export DOTFILES_NVM_LOADED=1
         fi
     fi
-    
+
+    # Load language modules to ensure correct PATH setup (especially for uv-managed Python)
+    if [[ -f "$DOTFILES_DIR/shell/languages.sh" ]]; then
+        source "$DOTFILES_DIR/shell/languages.sh" &>/dev/null || true
+    fi
+
     # Validate key security if not already done in this session
     if [[ "${DOTFILES_KEY_SECURITY_VALIDATED:-}" != "1" ]]; then
         source "$DOTFILES_DIR/shell/security.sh"
@@ -744,10 +765,10 @@ show_status() {
             export DOTFILES_KEY_SECURITY_VALIDATED=1
         fi
     fi
-    
+
     # Source the shell functions to get access to dotfiles_status
     source "$DOTFILES_DIR/shell/functions.sh"
-    
+
     # Call the unified status function
     dotfiles_status
     
@@ -851,10 +872,40 @@ build_hooks() {
 
 update_environment() {
     echo -e "${GREEN}🔄 Updating Development Environment...${NC}"
-    
+
     # Set update mode for modules to install global packages
     export DOTFILES_UPDATE_MODE=1
-    
+
+    # Check and install brew-based tools
+    echo -e "${BLUE}🍺 Checking Homebrew tools...${NC}"
+
+    # Check for just
+    local JUST_VERSION=$(get_version_requirement "just")
+    if [[ -n "$JUST_VERSION" ]]; then
+        if ! command -v just &> /dev/null; then
+            echo -e "${YELLOW}⚠️  just not found, installing...${NC}"
+            if command -v brew &> /dev/null; then
+                brew install just
+                echo -e "${GREEN}✅ just installed successfully!${NC}"
+            else
+                echo -e "${RED}❌ Homebrew not found. Cannot install just.${NC}"
+            fi
+        else
+            local installed_just_version=$(just --version 2>/dev/null | awk '{print $2}' | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+            echo -e "${GREEN}✅ just $installed_just_version is already installed${NC}"
+
+            # Check if upgrade is available
+            local brew_outdated=$(brew outdated just 2>/dev/null)
+            if [[ -n "$brew_outdated" ]]; then
+                echo -e "${BLUE}📦 Upgrading just...${NC}"
+                brew upgrade just
+                echo -e "${GREEN}✅ just upgraded successfully!${NC}"
+            fi
+        fi
+    fi
+
+    echo ""
+
     # Update Node.js via NVM
     local NODE_VERSION=$(get_version_requirement "node")
     if [[ -n "$NODE_VERSION" ]]; then
@@ -944,7 +995,55 @@ update_environment() {
     fi
     
     echo ""
-    
+
+    # Update/Install uv
+    local UV_VERSION=$(get_version_requirement "uv")
+    if [[ -n "$UV_VERSION" ]]; then
+        if command -v uv &> /dev/null; then
+            local installed_uv_version=$(uv --version 2>/dev/null | awk '{print $2}' || echo "unknown")
+            if [[ "$installed_uv_version" != "unknown" ]]; then
+                echo -e "${BLUE}📦 uv $installed_uv_version is already installed${NC}"
+                echo -e "${BLUE}💡 To update uv, run: curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠️  uv not found${NC}"
+            echo -e "${BLUE}💡 Install with: curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
+        fi
+    fi
+
+    echo ""
+
+    # Update/Install Python via uv
+    local PYTHON_VERSION=$(get_version_requirement "python")
+    if [[ -n "$PYTHON_VERSION" ]]; then
+        if command -v uv &> /dev/null; then
+            echo -e "${BLUE}📦 Checking Python $PYTHON_VERSION via uv...${NC}"
+
+            # Check if Python version is already installed via uv
+            if uv python list 2>/dev/null | grep -q "cpython-$PYTHON_VERSION"; then
+                echo -e "${GREEN}✅ Python $PYTHON_VERSION is already installed via uv${NC}"
+            else
+                echo -e "${BLUE}📦 Installing Python $PYTHON_VERSION via uv...${NC}"
+                if uv python install "$PYTHON_VERSION"; then
+                    echo -e "${GREEN}✅ Python $PYTHON_VERSION installed successfully!${NC}"
+                else
+                    echo -e "${RED}❌ Failed to install Python $PYTHON_VERSION${NC}"
+                fi
+            fi
+
+            # Show all installed Python versions
+            echo -e "${BLUE}📋 Installed Python versions:${NC}"
+            uv python list 2>/dev/null || echo "  No Python versions found"
+        else
+            echo -e "${RED}❌ uv not found. Cannot manage Python versions.${NC}"
+            echo -e "${BLUE}💡 Install uv first: curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Python version not specified in versions.config${NC}"
+    fi
+
+    echo ""
+
     # Update tmux plugins
     source "$DOTFILES_DIR/shell/tmux.sh"
     update_tmux_plugins

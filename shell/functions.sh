@@ -103,7 +103,13 @@ dotfiles_status() {
     else
         echo "   ❌ GNU Stow: Not installed"
     fi
-    
+
+    if command -v just &>/dev/null; then
+        echo "   ✅ just: $(just --version 2>/dev/null | awk '{print $2}')"
+    else
+        echo "   ❌ just: Not installed"
+    fi
+
     # Programming Languages
     # Check if NVM is available - load it first if installed
     local nvm_loaded=false
@@ -146,7 +152,85 @@ dotfiles_status() {
     else
         echo "   ❌ Rust: Not available"
     fi
-    
+
+    # Python & uv
+    if command -v uv &>/dev/null; then
+        local uv_version=$(uv --version 2>/dev/null | awk '{print $2}' || echo "unknown")
+        echo "   ✅ uv: $uv_version"
+
+        # Check active Python and its source
+        if command -v python3 &>/dev/null; then
+            local python_version=$(python3 --version 2>/dev/null | awk '{print $2}')
+            local python_path=$(which python3 2>/dev/null)
+            local uv_pythons=$(uv python list 2>/dev/null | grep -c "cpython-" || echo "0")
+
+            # Get required Python version from versions.config
+            local required_python=$(get_version_requirement "python" 2>/dev/null || echo "3.11")
+
+            # Determine Python source
+            local python_source="system"
+            if [[ "$python_path" == *"/.local/share/uv/python/"* ]]; then
+                python_source="uv-managed"
+            fi
+
+            # Check if version meets requirement
+            local major_version=${python_version%%.*}
+            local minor_version=${python_version#*.}
+            minor_version=${minor_version%%.*}
+            local required_minor=${required_python#*.}
+            required_minor=${required_minor%%.*}
+
+            local version_ok=true
+            if [[ $major_version -lt 3 ]] || [[ $major_version -eq 3 && $minor_version -lt $required_minor ]]; then
+                version_ok=false
+            fi
+
+            # Display status with appropriate icon and message
+            if [[ "$version_ok" == "true" ]]; then
+                echo "   ✅ Python: $python_version ($python_source)"
+            else
+                echo "   ⚠️  Python: $python_version ($python_source) - requires $required_python+"
+            fi
+
+            # Show path for clarity
+            echo "       └── Active: $python_path"
+
+            # Show uv-managed versions if available
+            if [[ $uv_pythons -gt 0 ]]; then
+                echo "       └── uv-managed: $(uv python list 2>/dev/null | grep 'cpython-' | awk '{print $1}' | paste -sd ',' - || echo 'none')"
+            fi
+        else
+            local uv_pythons=$(uv python list 2>/dev/null | grep -c "cpython-" || echo "0")
+            if [[ $uv_pythons -gt 0 ]]; then
+                echo "   ⚠️  Python: Not in PATH ($uv_pythons uv-managed versions available)"
+                echo "       └── uv-managed: $(uv python list 2>/dev/null | grep 'cpython-' | awk '{print $1}' | paste -sd ',' - || echo 'none')"
+            else
+                echo "   ❌ Python: Not available"
+            fi
+        fi
+    else
+        echo "   ❌ uv: Not installed"
+        if command -v python3 &>/dev/null; then
+            local python_version=$(python3 --version 2>/dev/null | awk '{print $2}')
+            local required_python=$(get_version_requirement "python" 2>/dev/null || echo "3.11")
+
+            # Check version requirement
+            local major_version=${python_version%%.*}
+            local minor_version=${python_version#*.}
+            minor_version=${minor_version%%.*}
+            local required_minor=${required_python#*.}
+            required_minor=${required_minor%%.*}
+
+            if [[ $major_version -lt 3 ]] || [[ $major_version -eq 3 && $minor_version -lt $required_minor ]]; then
+                echo "   ⚠️  Python: $python_version (system) - requires $required_python+"
+            else
+                echo "   ✅ Python: $python_version (system)"
+            fi
+        else
+            echo "   ❌ Python: Not available"
+        fi
+    fi
+
     # Editor and Tools
     if command -v nvim &>/dev/null; then
         echo "   ✅ Neovim: $(nvim --version | head -1 | awk '{print $2}')"
@@ -500,6 +584,9 @@ validate_tool_versions() {
                 "brew")
                     current_version=$(brew --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
                     ;;
+                "just")
+                    current_version=$(just --version 2>/dev/null | awk '{print $2}' | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
                 "nvim")
                     current_version=$(nvim --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
                     ;;
@@ -529,6 +616,15 @@ validate_tool_versions() {
                     ;;
                 "rustup")
                     current_version=$(rustup --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "uv")
+                    current_version=$(uv --version 2>/dev/null | awk '{print $2}' | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "python")
+                    # Check python3 version
+                    if command -v python3 &>/dev/null; then
+                        current_version=$(python3 --version 2>/dev/null | awk '{print $2}' | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+                    fi
                     ;;
             esac
             
