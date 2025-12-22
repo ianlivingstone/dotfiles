@@ -41,8 +41,9 @@ start_ssh_agent() {
         grep "IdentityFile" "$xdg_config/ssh/machine.config" | while read -r line; do
             local key_path=$(echo "$line" | awk '{print $2}' | sed "s|~|$HOME|")
             if [[ -f "$key_path" ]]; then
-                # Use lazy loading - won't prompt for passwords during shell startup
-                lazy_load_ssh_key "$key_path" || true
+                # Use lazy loading with --quiet flag to avoid prompts during shell startup
+                # Keys must be in macOS Keychain to load automatically
+                lazy_load_ssh_key "$key_path" --quiet || true
             fi
         done
     fi

@@ -37,11 +37,13 @@ source "$SHELL_DIR/languages.sh"
 source "$SHELL_DIR/functions.sh"
 
 # Security validation (must run before agents)
-if ! source "$SHELL_DIR/security.sh" || ! validate_key_security; then
-    echo "🚨 Shell startup aborted due to security validation failure"
-    echo "💡 Fix the key encryption issues above and restart your shell"
-    echo "💡 You can still run 'security_status' to check your current setup"
-    return 1
+# Note: This is now non-blocking - warnings shown but shell continues
+source "$SHELL_DIR/security.sh"
+if ! validate_key_security; then
+    echo "⚠️  Security validation warnings detected (see above)"
+    echo "💡 Run 'fix_security_permissions' to fix permission issues"
+    echo "💡 Run 'security_status' to see detailed security status"
+    echo ""
 fi
 
 # SSH and GPG agent management

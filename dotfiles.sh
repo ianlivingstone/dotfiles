@@ -3,7 +3,7 @@
 # Dotfiles management script using GNU Stow
 
 set -euo pipefail
-trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
+trap 'echo "❌ Installation failed at line $LINENO" >&2; exit 1' ERR
 
 # Get the directory of this script
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
@@ -97,6 +97,10 @@ check_dependencies() {
         missing_deps+=("just")
     fi
 
+    if ! command -v duckdb &> /dev/null; then
+        missing_deps+=("duckdb")
+    fi
+
     if ! command -v nvim &> /dev/null; then
         missing_deps+=("nvim")
     fi
@@ -177,6 +181,9 @@ check_dependencies() {
                     ;;
                 "just")
                     echo -e "  ${RED}•${NC} just: brew install just"
+                    ;;
+                "duckdb")
+                    echo -e "  ${RED}•${NC} duckdb: brew install duckdb"
                     ;;
                 "nvim")
                     echo -e "  ${RED}•${NC} Neovim: brew install neovim"
@@ -904,6 +911,31 @@ update_environment() {
         fi
     fi
 
+    # Check for duckdb
+    local DUCKDB_VERSION=$(get_version_requirement "duckdb")
+    if [[ -n "$DUCKDB_VERSION" ]]; then
+        if ! command -v duckdb &> /dev/null; then
+            echo -e "${YELLOW}⚠️  duckdb not found, installing...${NC}"
+            if command -v brew &> /dev/null; then
+                brew install duckdb
+                echo -e "${GREEN}✅ duckdb installed successfully!${NC}"
+            else
+                echo -e "${RED}❌ Homebrew not found. Cannot install duckdb.${NC}"
+            fi
+        else
+            local installed_duckdb_version=$(duckdb --version 2>/dev/null | awk '{print $1}' | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+            echo -e "${GREEN}✅ duckdb $installed_duckdb_version is already installed${NC}"
+
+            # Check if upgrade is available
+            local brew_outdated=$(brew outdated duckdb 2>/dev/null)
+            if [[ -n "$brew_outdated" ]]; then
+                echo -e "${BLUE}📦 Upgrading duckdb...${NC}"
+                brew upgrade duckdb
+                echo -e "${GREEN}✅ duckdb upgraded successfully!${NC}"
+            fi
+        fi
+    fi
+
     echo ""
 
     # Update Node.js via NVM
@@ -968,7 +1000,7 @@ update_environment() {
                         [[ -n "$saved_errexit" ]] && set -e
                         [[ -n "$saved_nounset" ]] && set -u
                         [[ -n "$saved_pipefail" ]] && set -o pipefail
-                        trap 'echo "❌ Installation failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
+                        trap 'echo "❌ Installation failed at line $LINENO" >&2; exit 1' ERR
                         return 1
                     fi
                 fi
@@ -1049,10 +1081,41 @@ update_environment() {
     update_tmux_plugins
     
     echo ""
-    
+
     # Build Claude Code hooks
     build_hooks
-    
+
+    echo ""
+
+    # Show SSH and security status
+    echo -e "${BLUE}🔐 Security Status:${NC}"
+
+    # SSH Agent Status
+    if [[ -n "$SSH_AUTH_SOCK" ]] && ssh-add -l &>/dev/null; then
+        local key_count=$(ssh-add -l 2>/dev/null | wc -l | xargs)
+        echo -e "   ✅ SSH Agent: Running ($key_count keys loaded)"
+    else
+        echo -e "   ⚠️  SSH Agent: Not running or no keys loaded"
+        echo -e "       💡 Load SSH keys: ssh-add ~/.ssh/id_ed25519"
+    fi
+
+    # GPG Agent Status
+    if pgrep -x "gpg-agent" > /dev/null && gpg-connect-agent --quiet /bye &>/dev/null; then
+        echo -e "   ✅ GPG Agent: Running"
+    else
+        echo -e "   ⚠️  GPG Agent: Not running"
+    fi
+
+    # GitHub SSH Connectivity
+    if ssh -T git@github.com -o ConnectTimeout=5 -o BatchMode=yes 2>&1 | grep -q "successfully authenticated"; then
+        echo -e "   ✅ GitHub SSH: Connected"
+    else
+        echo -e "   ⚠️  GitHub SSH: Connection failed"
+        echo -e "       💡 Test with: ssh -T git@github.com"
+    fi
+
+    echo ""
+
     # Clean up update mode
     unset DOTFILES_UPDATE_MODE
 }

@@ -110,6 +110,12 @@ dotfiles_status() {
         echo "   ❌ just: Not installed"
     fi
 
+    if command -v duckdb &>/dev/null; then
+        echo "   ✅ duckdb: $(duckdb --version 2>/dev/null | awk '{print $1}')"
+    else
+        echo "   ❌ duckdb: Not installed"
+    fi
+
     # Programming Languages
     # Check if NVM is available - load it first if installed
     local nvm_loaded=false
@@ -586,6 +592,9 @@ validate_tool_versions() {
                     ;;
                 "just")
                     current_version=$(just --version 2>/dev/null | awk '{print $2}' | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+                    ;;
+                "duckdb")
+                    current_version=$(duckdb --version 2>/dev/null | awk '{print $1}' | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
                     ;;
                 "nvim")
                     current_version=$(nvim --version 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+' | head -1)

@@ -338,33 +338,38 @@ remove_ssh_key_from_keychain() {
 }
 
 # Lazy load SSH key (checks if needed, loads from keychain if available)
-# Usage: lazy_load_ssh_key /path/to/key
+# Usage: lazy_load_ssh_key /path/to/key [--quiet]
 lazy_load_ssh_key() {
     local key_path="$1"
-    
+    local quiet="${2:-}"
+
     [[ ! -f "$key_path" ]] && return 1
     [[ "$key_path" == *.pub ]] && return 1  # Skip public keys
-    
+
     # Skip if already loaded
     if is_ssh_key_loaded "$key_path"; then
         return 0
     fi
-    
+
     # If key is encrypted, try loading from keychain
     if is_ssh_key_encrypted "$key_path"; then
-        # Try to load from keychain silently
+        # Try to load from keychain silently (no password prompt)
+        # The --apple-load-keychain flag loads ALL keys from keychain without prompting
         if ssh-add --apple-load-keychain 2>/dev/null; then
             # Check if our key is now loaded
             if is_ssh_key_loaded "$key_path"; then
                 return 0
             fi
         fi
-        
-        # Key not in keychain, skip to avoid password prompt during shell startup
-        echo "💡 SSH key $(basename "$key_path") requires setup - run: ssh-add --apple-use-keychain $key_path"
+
+        # Key not in keychain - only show message if not quiet mode
+        # During shell startup, we run in quiet mode to avoid cluttering output
+        if [[ "$quiet" != "--quiet" ]]; then
+            echo "💡 SSH key $(basename "$key_path") requires setup - run: ssh-add --apple-use-keychain $key_path"
+        fi
         return 1
     else
-        # Key is not encrypted, add directly
+        # Key is not encrypted, add directly (no password needed)
         if ssh-add "$key_path" 2>/dev/null; then
             return 0
         else
