@@ -90,30 +90,24 @@ dotfiles_status() {
     
     # Development Environment
     echo "🛠️  Development Environment:"
-    
-    # Package Managers
-    if command -v brew &>/dev/null; then
-        echo "   ✅ Homebrew: $(brew --version | head -1 | sed 's/Homebrew //')"
-    else
-        echo "   ❌ Homebrew: Not installed"
-    fi
-    
-    if command -v stow &>/dev/null; then
-        echo "   ✅ GNU Stow: $(stow --version | head -1 | sed 's/stow (GNU Stow) //')"
-    else
-        echo "   ❌ GNU Stow: Not installed"
-    fi
 
-    if command -v just &>/dev/null; then
-        echo "   ✅ just: $(just --version 2>/dev/null | awk '{print $2}')"
-    else
-        echo "   ❌ just: Not installed"
-    fi
+    # Core System Tools - consolidated check
+    local core_tools=(git zsh stow brew just jq rg luarocks gpg duckdb)
+    local missing_tools=()
 
-    if command -v duckdb &>/dev/null; then
-        echo "   ✅ duckdb: $(duckdb --version 2>/dev/null | awk '{print $1}')"
+    for tool in "${core_tools[@]}"; do
+        if ! command -v "$tool" &>/dev/null; then
+            missing_tools+=("$tool")
+        fi
+    done
+
+    if [[ ${#missing_tools[@]} -eq 0 ]]; then
+        echo "   ✅ Core System Tools: All present (${#core_tools[@]} tools)"
     else
-        echo "   ❌ duckdb: Not installed"
+        echo "   ⚠️  Core System Tools: ${#missing_tools[@]} missing"
+        for tool in "${missing_tools[@]}"; do
+            echo "       ❌ $tool: Not installed"
+        done
     fi
 
     # Programming Languages
@@ -151,7 +145,19 @@ dotfiles_status() {
     else
         echo "   ❌ Go: Not available"
     fi
-    
+
+    # Go language server
+    if command -v gopls &>/dev/null; then
+        local gopls_version=$(gopls version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+        if [[ -n "$gopls_version" ]]; then
+            echo "   ✅ gopls: $gopls_version"
+        else
+            echo "   ✅ gopls: installed"
+        fi
+    else
+        echo "   ❌ gopls: Not installed"
+    fi
+
     if command -v cargo &>/dev/null; then
         local rust_version=$(rustc --version 2>/dev/null | awk '{print $2}')
         echo "   ✅ Rust: $rust_version"
@@ -200,16 +206,10 @@ dotfiles_status() {
 
             # Show path for clarity
             echo "       └── Active: $python_path"
-
-            # Show uv-managed versions if available
-            if [[ $uv_pythons -gt 0 ]]; then
-                echo "       └── uv-managed: $(uv python list 2>/dev/null | grep 'cpython-' | awk '{print $1}' | paste -sd ',' - || echo 'none')"
-            fi
         else
             local uv_pythons=$(uv python list 2>/dev/null | grep -c "cpython-" || echo "0")
             if [[ $uv_pythons -gt 0 ]]; then
                 echo "   ⚠️  Python: Not in PATH ($uv_pythons uv-managed versions available)"
-                echo "       └── uv-managed: $(uv python list 2>/dev/null | grep 'cpython-' | awk '{print $1}' | paste -sd ',' - || echo 'none')"
             else
                 echo "   ❌ Python: Not available"
             fi
@@ -580,6 +580,9 @@ validate_tool_versions() {
                     ;;
                 "go")
                     current_version=$(go version 2>/dev/null | grep -o 'go[0-9]\+\.[0-9]\+\.[0-9]\+')
+                    ;;
+                "gopls")
+                    current_version=$(gopls version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
                     ;;
                 "zsh")
                     current_version=$(zsh --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+' | head -1)

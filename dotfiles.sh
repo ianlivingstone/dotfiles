@@ -111,6 +111,11 @@ check_dependencies() {
 
     # Note: Python is managed by uv (checked in shell/uv.sh module)
 
+    # Check for Go tools
+    if ! command -v gopls &> /dev/null; then
+        missing_deps+=("gopls")
+    fi
+
     # Check for development environment managers
     if ! command -v nvm &> /dev/null && [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
         missing_deps+=("nvm")
@@ -190,6 +195,9 @@ check_dependencies() {
                     ;;
                 "tmux")
                     echo -e "  ${RED}•${NC} Tmux: brew install tmux"
+                    ;;
+                "gopls")
+                    echo -e "  ${RED}•${NC} gopls: go install golang.org/x/tools/gopls@latest"
                     ;;
                 "nvm")
                     echo -e "  ${RED}•${NC} NVM: curl --proto '=https' --tlsv1.2 -o- -sSfL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash"
@@ -1025,7 +1033,30 @@ update_environment() {
     else
         echo -e "${YELLOW}⚠️  Go version not specified in versions.config${NC}"
     fi
-    
+
+    echo ""
+
+    # Update/Install gopls (Go language server)
+    local GOPLS_VERSION=$(get_version_requirement "gopls")
+    if [[ -n "$GOPLS_VERSION" ]]; then
+        if command -v go &> /dev/null; then
+            if command -v gopls &> /dev/null; then
+                local installed_gopls_version=$(gopls version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 | sed 's/v//')
+                echo -e "${GREEN}✅ gopls $installed_gopls_version is already installed${NC}"
+                echo -e "${BLUE}📦 Updating gopls to latest version...${NC}"
+                go install golang.org/x/tools/gopls@latest
+                echo -e "${GREEN}✅ gopls updated successfully!${NC}"
+            else
+                echo -e "${YELLOW}⚠️  gopls not found, installing...${NC}"
+                go install golang.org/x/tools/gopls@latest
+                echo -e "${GREEN}✅ gopls installed successfully!${NC}"
+            fi
+        else
+            echo -e "${RED}❌ Go not found. Cannot install gopls.${NC}"
+            echo -e "${BLUE}💡 Install Go first using: ./dotfiles.sh update${NC}"
+        fi
+    fi
+
     echo ""
 
     # Update/Install uv
