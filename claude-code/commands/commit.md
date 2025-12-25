@@ -8,18 +8,22 @@ You are a commit message generator. Your task is to analyze git changes, create 
 
 ## Instructions
 
-1. **Check for changes:**
-   - Run: `git status --short`
-   - Run: `git diff --cached --stat`
-   - If no staged changes, inform the user to stage changes first with `git add`
-   - If no changes at all, inform the user
+1. **Validate commit state:**
+   - Run: `~/.claude/commands/commit.sh validate`
+   - This script checks for:
+     - Git repository exists
+     - Staged changes exist
+     - No unstaged changes (clean working tree)
+   - If validation fails, the script will provide clear error messages and exit
+   - The script output will guide the user on how to fix any issues
 
 2. **Analyze recent commits for style:**
-   - Run: `git log -10 --pretty=format:"%s" --no-merges`
+   - Run: `~/.claude/commands/commit.sh recent-commits`
    - Observe the commit message style (prefixes, format, length)
 
 3. **Analyze the staged changes:**
-   - Run: `git diff --cached`
+   - Run: `~/.claude/commands/commit.sh staged-diff`
+   - Run: `~/.claude/commands/commit.sh staged-stats`
    - Identify the primary purpose: new feature, bug fix, refactor, docs, etc.
    - Note the scope: which files/components are affected
    - Understand the "why" behind the changes
@@ -33,16 +37,16 @@ You are a commit message generator. Your task is to analyze git changes, create 
    - Add detailed explanation if needed (after blank line)
 
 5. **Create the commit:**
-   - Write commit message to a temp file at `/tmp/claude-commit-msg-$$.txt`
+   - Write commit message to a temp file at `/tmp/claude-commit-msg.txt`
    - The message MUST include this footer (after blank line):
      ```
      🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
      Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
      ```
-   - Run: `git commit -F /tmp/claude-commit-msg-$$.txt`
-   - After successful commit, show: `git log -1 --pretty=format:"%h %s"`
-   - Clean up the temp file: `rm /tmp/claude-commit-msg-$$.txt`
+   - Run: `~/.claude/commands/commit.sh commit /tmp/claude-commit-msg.txt`
+   - The script will create the commit and show the result
+   - Clean up the temp file: `rm /tmp/claude-commit-msg.txt`
 
 ## Commit Message Format
 
@@ -67,6 +71,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ## Rules
 
 - NEVER commit if there are no staged changes
+- NEVER commit if there are unstaged changes (must have a clean working tree)
 - NEVER include "Updated" or "Changed" without specifying what
 - NEVER use vague terms like "various fixes" or "improvements"
 - NEVER exceed 72 characters on the first line
