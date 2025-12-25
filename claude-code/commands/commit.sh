@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Commit validation and helper script for /commit command
-# This script handles the deterministic checks before AI-generated commit
+# Automated commit script with AI-generated messages
+# Validates git state, analyzes changes, and creates commits
 
 set -euo pipefail
 
@@ -151,8 +151,57 @@ create_commit() {
     fi
 }
 
+# Function to display commit context for AI
+display_commit_context() {
+    echo -e "${BLUE}━━━ Recent Commit Style ━━━${NC}"
+    get_recent_commits
+    echo ""
+    echo -e "${BLUE}━━━ Staged Changes Stats ━━━${NC}"
+    get_staged_stats
+    echo ""
+    echo -e "${BLUE}━━━ Staged Changes Diff ━━━${NC}"
+    get_staged_diff
+}
+
+# Main workflow
+main() {
+    echo -e "${GREEN}🤖 AI Commit Generator${NC}"
+    echo ""
+
+    # Validate state
+    if ! validate_commit_state; then
+        exit 1
+    fi
+
+    echo ""
+    echo -e "${BLUE}📊 Gathering context for commit message...${NC}"
+    echo ""
+
+    # Display all context
+    display_commit_context
+
+    echo ""
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}✍️  Commit Message Guidelines:${NC}"
+    echo "  • First line: concise summary (50-72 chars max)"
+    echo "  • Use imperative mood: 'Add feature' not 'Added feature'"
+    echo "  • Match repository style (use feat:/fix: if others do)"
+    echo "  • Be specific: 'Add gopls config' not 'Update files'"
+    echo "  • Focus on WHAT and WHY, not HOW"
+    echo ""
+    echo "  MUST include footer:"
+    echo "    🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+    echo ""
+    echo "    Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+    echo ""
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
 # Main command dispatcher
-case "${1:-validate}" in
+case "${1:-main}" in
+    main)
+        main
+        ;;
     validate)
         validate_commit_state
         ;;
@@ -173,7 +222,8 @@ case "${1:-validate}" in
         create_commit "$2"
         ;;
     *)
-        echo "Usage: $0 {validate|recent-commits|staged-diff|staged-stats|commit <msg-file>}"
+        echo "Usage: $0 [validate|recent-commits|staged-diff|staged-stats|commit <msg-file>]"
+        echo "Default: run full workflow and display context for AI"
         exit 1
         ;;
 esac
