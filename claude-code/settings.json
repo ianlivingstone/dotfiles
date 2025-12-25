@@ -1,3 +1,4 @@
 {
-  "autoUpdate": false
+  "autoUpdate": false,
+  "alwaysThinkingEnabled": false
 }

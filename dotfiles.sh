@@ -58,37 +58,39 @@ show_help() {
 }
 
 check_dependencies() {
+    local auto_install="${1:-false}"
     local missing_deps=()
-    
+    local installable_deps=()
+
     # Check for required tools
     if ! command -v stow &> /dev/null; then
         missing_deps+=("stow")
     fi
-    
+
     if ! command -v starship &> /dev/null; then
         missing_deps+=("starship")
     fi
-    
+
     if ! command -v git &> /dev/null; then
         missing_deps+=("git")
     fi
-    
+
     if ! command -v zsh &> /dev/null; then
         missing_deps+=("zsh")
     fi
-    
+
     if ! command -v luarocks &> /dev/null; then
         missing_deps+=("luarocks")
     fi
-    
+
     if ! command -v rg &> /dev/null; then
         missing_deps+=("rg")
     fi
-    
+
     if ! command -v jq &> /dev/null; then
         missing_deps+=("jq")
     fi
-    
+
     if ! command -v brew &> /dev/null; then
         missing_deps+=("brew")
     fi
@@ -104,38 +106,80 @@ check_dependencies() {
     if ! command -v nvim &> /dev/null; then
         missing_deps+=("nvim")
     fi
-    
+
     if ! command -v tmux &> /dev/null; then
         missing_deps+=("tmux")
     fi
 
     # Note: Python is managed by uv (checked in shell/uv.sh module)
 
-    # Check for Go tools
+    # Check for Go tools (can be auto-installed)
     if ! command -v gopls &> /dev/null; then
-        missing_deps+=("gopls")
+        if [[ "$auto_install" == "true" ]] && command -v go &> /dev/null; then
+            installable_deps+=("gopls")
+        else
+            missing_deps+=("gopls")
+        fi
     fi
 
     # Check for development environment managers
     if ! command -v nvm &> /dev/null && [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
         missing_deps+=("nvm")
     fi
-    
+
     if ! command -v gvm &> /dev/null && [[ ! -s "$HOME/.gvm/scripts/gvm" ]]; then
         missing_deps+=("gvm")
     fi
-    
+
     if ! command -v rustup &> /dev/null; then
         missing_deps+=("rustup")
     fi
 
+    # Check for uv (can be auto-installed)
     if ! command -v uv &> /dev/null; then
-        missing_deps+=("uv")
+        if [[ "$auto_install" == "true" ]]; then
+            installable_deps+=("uv")
+        else
+            missing_deps+=("uv")
+        fi
     fi
 
     # Check for security tools
     if ! command -v gpg &> /dev/null; then
         missing_deps+=("gpg")
+    fi
+
+    # Auto-install if requested
+    if [[ "$auto_install" == "true" ]] && [[ ${#installable_deps[@]} -gt 0 ]]; then
+        echo -e "${BLUE}📦 Auto-installing missing dependencies...${NC}"
+        echo ""
+
+        for dep in "${installable_deps[@]}"; do
+            case "$dep" in
+                gopls)
+                    echo -e "${YELLOW}⚠️  gopls not found, installing...${NC}"
+                    if go install golang.org/x/tools/gopls@latest; then
+                        echo -e "${GREEN}✅ gopls installed successfully!${NC}"
+                    else
+                        echo -e "${RED}❌ Failed to install gopls${NC}"
+                        missing_deps+=("gopls")
+                    fi
+                    ;;
+                uv)
+                    echo -e "${YELLOW}⚠️  uv not found, installing...${NC}"
+                    if curl -LsSf https://astral.sh/uv/install.sh | sh; then
+                        echo -e "${GREEN}✅ uv installed successfully!${NC}"
+                        # Source the uv shell config to make it available immediately
+                        export PATH="$HOME/.local/bin:$PATH"
+                    else
+                        echo -e "${RED}❌ Failed to install uv${NC}"
+                        missing_deps+=("uv")
+                    fi
+                    ;;
+            esac
+        done
+
+        echo ""
     fi
     
     # Check for containerization tools
@@ -566,10 +610,14 @@ configure_hostname() {
 }
 
 install_dotfiles() {
+    local skip_dep_check="${1:-false}"
+
     echo -e "${GREEN}🏠 Installing dotfiles...${NC}"
-    
-    check_dependencies
-    
+
+    if [[ "$skip_dep_check" != "true" ]]; then
+        check_dependencies
+    fi
+
     echo -e "${BLUE}📁 Using dotfiles directory: $DOTFILES_DIR${NC}"
     
     # Change to dotfiles directory
@@ -1162,7 +1210,12 @@ case "${1:-help}" in
     "reinstall")
         uninstall_dotfiles
         echo ""
-        install_dotfiles
+        # Enable auto-install for reinstall to avoid blocking on gopls/uv
+        check_dependencies true
+        if [[ $? -ne 0 ]]; then
+            exit 1
+        fi
+        install_dotfiles true  # Skip dependency check since we just did it
         ;;
     "status")
         show_status

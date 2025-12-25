@@ -1,0 +1,44 @@
+{
+  "ui.diagnostic.analyses": {
+    "fieldalignment": true,
+    "nilness": true,
+    "shadow": true,
+    "unusedparams": true,
+    "unusedwrite": true,
+    "useany": true
+  },
+  "ui.diagnostic.staticcheck": true,
+  "ui.diagnostic.annotations": {
+    "bounds": true,
+    "escape": true,
+    "inline": true,
+    "nil": true
+  },
+  "ui.completion.usePlaceholders": true,
+  "ui.completion.matcher": "fuzzy",
+  "ui.semanticTokens": true,
+  "formatting.gofumpt": true,
+  "formatting.local": "github.com/keycardlabs",
+  "ui.codelenses": {
+    "gc_details": true,
+    "generate": true,
+    "regenerate_cgo": true,
+    "test": true,
+    "tidy": true,
+    "upgrade_dependency": true,
+    "vendor": true
+  },
+  "ui.navigation.importShortcut": "Both",
+  "ui.navigation.symbolMatcher": "FastFuzzy",
+  "ui.navigation.symbolStyle": "Dynamic",
+  "hints": {
+    "assignVariableTypes": true,
+    "compositeLiteralFields": true,
+    "compositeLiteralTypes": true,
+    "constantValues": true,
+    "functionTypeParameters": true,
+    "parameterNames": true,
+    "rangeVariableTypes": true
+  },
+  "allExperiments": true
+}
