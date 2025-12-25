@@ -56,32 +56,22 @@ load_gvm() {
     return 1
 }
 
-# Check if GVM exists and set up lazy loading  
+# Check if GVM exists and load it eagerly
 if [[ -s "$GVM_ROOT/scripts/gvm" ]]; then
-    # Create wrapper functions for GVM and Go commands
-    gvm() { load_gvm && command gvm "$@"; }
-    go() { load_gvm && command go "$@"; }
-    
-    # Fast filesystem-based checks (no slow GVM commands during startup)
+    # Load GVM immediately during shell startup to avoid warnings later
+    load_gvm
+
     # Check if configured Go version is installed
     if [[ ! -d "$GVM_ROOT/gos/$GO_VERSION" ]]; then
         show_warning "Go $GO_VERSION not installed"
-    else
-        # Ensure Go paths are in PATH for immediate access
-        add_to_path "$GVM_ROOT/gos/$GO_VERSION/bin"
-        add_to_path "$GVM_ROOT/pkgsets/$GO_VERSION/global/bin"
-        
-        # Set Go environment variables as fallback
-        export GOROOT="${GOROOT:-$GVM_ROOT/gos/$GO_VERSION}"
-        export GOPATH="${GOPATH:-$GVM_ROOT/pkgsets/$GO_VERSION/global}"
     fi
-    
+
     # Check if default environment matches configured version
     local current_default=""
     if [[ -f "$GVM_ROOT/environments/default" ]]; then
         current_default=$(grep "gvm_go_name" "$GVM_ROOT/environments/default" 2>/dev/null | cut -d'"' -f2 || echo "")
     fi
-    
+
     if [[ -z "$current_default" ]]; then
         show_warning "No default Go version set, expected $GO_VERSION"
     elif [[ "$current_default" != "$GO_VERSION" ]]; then
