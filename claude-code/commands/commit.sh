@@ -267,6 +267,13 @@ display_commit_context() {
     get_staged_diff
 }
 
+# Function to generate unique commit message filename
+generate_commit_filename() {
+    # Use base64 encoded random data for uniqueness
+    local random_id=$(head -c 12 /dev/urandom | base64 | tr -d '/+=' | head -c 16)
+    echo "/tmp/commit-msg-${random_id}.txt"
+}
+
 # Main workflow
 main() {
     echo -e "${GREEN}🤖 AI Commit Generator${NC}"
@@ -299,6 +306,13 @@ main() {
     echo "    Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
     echo ""
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${CYAN}💡 Next steps:${NC}"
+    echo "  1. Write commit message to: ${BLUE}$(generate_commit_filename)${NC}"
+    echo "  2. Run: ${BLUE}~/.claude/commands/commit.sh commit <filename>${NC}"
+    echo ""
+    echo -e "${CYAN}Or generate a unique filename:${NC}"
+    echo "  ${BLUE}~/.claude/commands/commit.sh generate-filename${NC}"
 }
 
 # Main command dispatcher
@@ -318,6 +332,9 @@ case "${1:-main}" in
     staged-stats)
         get_staged_stats
         ;;
+    generate-filename)
+        generate_commit_filename
+        ;;
     commit)
         if [[ -z "${2:-}" ]]; then
             echo -e "${RED}❌ Error: Message file path required${NC}" >&2
@@ -326,7 +343,7 @@ case "${1:-main}" in
         create_commit "$2"
         ;;
     *)
-        echo "Usage: $0 [validate|recent-commits|staged-diff|staged-stats|commit <msg-file>]"
+        echo "Usage: $0 [validate|recent-commits|staged-diff|staged-stats|generate-filename|commit <msg-file>]"
         echo "Default: run full workflow and display context for AI"
         exit 1
         ;;
