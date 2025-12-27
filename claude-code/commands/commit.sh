@@ -175,14 +175,41 @@ get_staged_stats() {
     git diff --cached --stat
 }
 
-# Function to create commit with message file
+# Function to create commit with message from stdin or file
 create_commit() {
-    local msg_file="$1"
+    local commit_msg=""
+    local temp_file=""
+    local cleanup_temp=false
 
-    if [[ ! -f "$msg_file" ]]; then
-        echo -e "${RED}❌ Error: Commit message file not found: $msg_file${NC}" >&2
+    # Read commit message from stdin if available, otherwise from file
+    if [[ -p /dev/stdin ]] || [[ ! -t 0 ]]; then
+        # Reading from stdin (pipe or redirect)
+        commit_msg=$(cat)
+        # Create temporary file for git commit
+        temp_file=$(mktemp)
+        echo "$commit_msg" > "$temp_file"
+        cleanup_temp=true
+    elif [[ -n "${1:-}" ]]; then
+        # Reading from file argument
+        local msg_file="$1"
+        if [[ ! -f "$msg_file" ]]; then
+            echo -e "${RED}❌ Error: Commit message file not found: $msg_file${NC}" >&2
+            exit 1
+        fi
+        temp_file="$msg_file"
+    else
+        echo -e "${RED}❌ Error: No commit message provided${NC}" >&2
+        echo "Usage: commit.sh commit <file>  OR  echo \"message\" | commit.sh commit"
         exit 1
     fi
+
+    # Cleanup function for temporary file
+    cleanup() {
+        if [[ "${cleanup_temp:-false}" == "true" ]] && [[ -f "${temp_file:-}" ]]; then
+            rm -f "$temp_file"
+        fi
+    }
+    trap cleanup EXIT
 
     # Check if GPG signing is required
     if is_gpg_signing_required; then
@@ -192,10 +219,13 @@ create_commit() {
         if ! is_gpg_agent_working; then
             echo -e "${RED}❌ GPG agent is not properly configured${NC}"
             echo ""
-            echo -e "${CYAN}Commit message saved to: $msg_file${NC}"
-            echo ""
-            echo -e "${YELLOW}To complete the commit, run:${NC}"
-            echo -e "${BLUE}git commit -F \"$msg_file\"${NC}"
+            if [[ "$cleanup_temp" == "false" ]]; then
+                echo -e "${CYAN}Commit message in: $temp_file${NC}"
+                echo -e "${YELLOW}To complete the commit, run:${NC}"
+                echo -e "${BLUE}git commit -F \"$temp_file\"${NC}"
+            else
+                echo -e "${YELLOW}To complete the commit, unlock GPG and try again${NC}"
+            fi
             echo ""
             echo -e "${CYAN}💡 Troubleshooting GPG:${NC}"
             echo "  • Check GPG agent: gpg-connect-agent /bye"
@@ -213,10 +243,13 @@ create_commit() {
             local signing_key=$(git config --get user.signingkey 2>/dev/null)
             echo -e "${YELLOW}⚠️  GPG key passphrase is not cached${NC}"
             echo ""
-            echo -e "${CYAN}Commit message saved to: $msg_file${NC}"
-            echo ""
-            echo -e "${YELLOW}Unlock your GPG key, then run:${NC}"
-            echo -e "${BLUE}git commit -F \"$msg_file\"${NC}"
+            if [[ "$cleanup_temp" == "false" ]]; then
+                echo -e "${CYAN}Commit message in: $temp_file${NC}"
+                echo -e "${YELLOW}Unlock your GPG key, then run:${NC}"
+                echo -e "${BLUE}git commit -F \"$temp_file\"${NC}"
+            else
+                echo -e "${YELLOW}Unlock your GPG key and try again${NC}"
+            fi
             echo ""
             echo -e "${CYAN}💡 To cache your passphrase, run:${NC}"
             echo -e "${BLUE}echo \"test\" | gpg --sign --local-user $signing_key --armor -o /dev/null${NC}"
@@ -229,7 +262,7 @@ create_commit() {
         echo -e "${BLUE}Attempting to commit...${NC}"
         echo ""
 
-        if git commit -F "$msg_file"; then
+        if git commit -F "$temp_file"; then
             echo ""
             echo -e "${GREEN}✅ Commit created successfully${NC}"
             echo ""
@@ -242,7 +275,7 @@ create_commit() {
         fi
     else
         # No GPG signing required
-        if git commit -F "$msg_file"; then
+        if git commit -F "$temp_file"; then
             echo -e "${GREEN}✅ Commit created successfully${NC}"
             echo ""
             git log -1 --pretty=format:"%C(yellow)%h%Creset %s"
@@ -336,14 +369,14 @@ case "${1:-main}" in
         generate_commit_filename
         ;;
     commit)
-        if [[ -z "${2:-}" ]]; then
-            echo -e "${RED}❌ Error: Message file path required${NC}" >&2
-            exit 1
-        fi
-        create_commit "$2"
+        # Accept stdin or file argument
+        create_commit "${2:-}"
         ;;
     *)
-        echo "Usage: $0 [validate|recent-commits|staged-diff|staged-stats|generate-filename|commit <msg-file>]"
+        echo "Usage: $0 [validate|recent-commits|staged-diff|staged-stats|generate-filename|commit [file]]"
+        echo "  commit: Pass message via stdin OR file argument"
+        echo "  Example: echo \"message\" | $0 commit"
+        echo "  Example: $0 commit /path/to/message.txt"
         echo "Default: run full workflow and display context for AI"
         exit 1
         ;;

@@ -12,14 +12,19 @@ Create commits with AI-generated messages and intelligent GPG handling.
 # 1. Get commit context and guidelines
 ~/.claude/commands/commit.sh
 
-# 2. Generate unique filename
-COMMIT_FILE=$(~/.claude/commands/commit.sh generate-filename)
+# 2. Pipe commit message directly to commit command
+cat <<'EOF' | ~/.claude/commands/commit.sh commit
+Your commit message here
 
-# 3. Write commit message to file
-# (Claude writes the message based on staged changes)
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-# 4. Commit with the message
-~/.claude/commands/commit.sh commit $COMMIT_FILE
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+EOF
 ```
 
-The script handles GPG signing detection automatically. If passphrase is cached, commits proceed automatically. If not, instructions are provided.
+**Alternative:** Pass message via file
+```bash
+~/.claude/commands/commit.sh commit /path/to/message.txt
+```
+
+The script handles GPG signing detection automatically. If passphrase is cached, commits proceed automatically. If not, instructions are provided. No temporary files needed when using stdin!
