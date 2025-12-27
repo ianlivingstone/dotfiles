@@ -58,6 +58,17 @@ is_gpg_agent_working() {
     return 0
 }
 
+# Function to test if GPG key passphrase is cached
+test_gpg_signing() {
+    local signing_key=$(git config --get user.signingkey 2>/dev/null)
+
+    # Try a test sign operation with a very short timeout
+    # If passphrase is cached, this will succeed immediately
+    # If passphrase is needed, this will fail/timeout
+    echo "test" | gpg --sign --local-user "$signing_key" --batch --no-tty -o /dev/null 2>/dev/null
+    return $?
+}
+
 # Function to check for staged changes
 check_staged_changes() {
     if ! git diff --cached --quiet; then
@@ -183,25 +194,8 @@ create_commit() {
         echo -e "${CYAN}🔐 GPG signing is required for commits${NC}"
 
         # Check if GPG agent is working
-        if is_gpg_agent_working; then
-            echo -e "${GREEN}✅ GPG agent is running and key is available${NC}"
-            echo -e "${BLUE}Attempting to commit...${NC}"
-            echo ""
-
-            if git commit -F "$msg_file"; then
-                echo ""
-                echo -e "${GREEN}✅ Commit created successfully${NC}"
-                echo ""
-                git log -1 --pretty=format:"%C(yellow)%h%Creset %s"
-                echo ""
-                return 0
-            else
-                echo -e "${RED}❌ Commit failed${NC}" >&2
-                return 1
-            fi
-        else
-            # GPG agent not working - save message and provide instructions
-            echo -e "${YELLOW}⚠️  GPG agent is not properly configured${NC}"
+        if ! is_gpg_agent_working; then
+            echo -e "${RED}❌ GPG agent is not properly configured${NC}"
             echo ""
             echo -e "${CYAN}Commit message saved to: $msg_file${NC}"
             echo ""
@@ -213,6 +207,42 @@ create_commit() {
             echo "  • Verify signing key: git config user.signingkey"
             echo "  • List secret keys: gpg --list-secret-keys"
             echo "  • Start GPG agent: gpgconf --launch gpg-agent"
+            return 1
+        fi
+
+        echo -e "${GREEN}✅ GPG agent is running and key is available${NC}"
+
+        # Test if passphrase is cached
+        echo -e "${BLUE}Testing GPG key passphrase...${NC}"
+        if ! test_gpg_signing; then
+            local signing_key=$(git config --get user.signingkey 2>/dev/null)
+            echo -e "${YELLOW}⚠️  GPG key passphrase is not cached${NC}"
+            echo ""
+            echo -e "${CYAN}Commit message saved to: $msg_file${NC}"
+            echo ""
+            echo -e "${YELLOW}Unlock your GPG key, then run:${NC}"
+            echo -e "${BLUE}git commit -F \"$msg_file\"${NC}"
+            echo ""
+            echo -e "${CYAN}💡 To cache your passphrase, run:${NC}"
+            echo -e "${BLUE}echo \"test\" | gpg --sign --local-user $signing_key --armor -o /dev/null${NC}"
+            echo ""
+            echo "This will prompt for your passphrase and cache it for future operations."
+            return 1
+        fi
+
+        echo -e "${GREEN}✅ GPG key passphrase is cached${NC}"
+        echo -e "${BLUE}Attempting to commit...${NC}"
+        echo ""
+
+        if git commit -F "$msg_file"; then
+            echo ""
+            echo -e "${GREEN}✅ Commit created successfully${NC}"
+            echo ""
+            git log -1 --pretty=format:"%C(yellow)%h%Creset %s"
+            echo ""
+            return 0
+        else
+            echo -e "${RED}❌ Commit failed${NC}" >&2
             return 1
         fi
     else
