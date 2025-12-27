@@ -59,12 +59,15 @@ is_gpg_agent_working() {
 }
 
 # Function to test if GPG key passphrase is cached
+# This is critical because Claude Code cannot render interactive GPG password prompts.
+# If the passphrase is not cached, git commit will hang waiting for input that cannot be provided.
+# By testing first, we can detect this situation and provide clear instructions to the user.
 test_gpg_signing() {
     local signing_key=$(git config --get user.signingkey 2>/dev/null)
 
-    # Try a test sign operation with a very short timeout
-    # If passphrase is cached, this will succeed immediately
-    # If passphrase is needed, this will fail/timeout
+    # Try a test sign operation with --batch and --no-tty flags
+    # If passphrase is cached in gpg-agent, this will succeed immediately
+    # If passphrase is needed, this will fail without prompting
     echo "test" | gpg --sign --local-user "$signing_key" --batch --no-tty -o /dev/null 2>/dev/null
     return $?
 }
@@ -143,25 +146,17 @@ validate_commit_state() {
         exit 1
     fi
 
-    # Has unstaged changes (the critical check we want)
-    if [[ "$has_unstaged" == "true" ]]; then
-        echo -e "${RED}❌ Error: Unstaged changes detected${NC}"
-        echo "The working tree must be clean (only staged changes allowed)"
-        echo ""
-        echo "Unstaged changes:"
-        git status --short | grep '^ M'
-        echo ""
-        echo "Options:"
-        echo "  1. Stage them: ${BLUE}git add <files>${NC} (if they should be in this commit)"
-        echo "  2. Stash them: ${BLUE}git stash${NC} (if they should not be in this commit)"
-        echo "  3. Commit separately (if they're unrelated changes)"
-        exit 1
-    fi
-
-    # All checks passed
+    # All checks passed - ready to commit staged changes
     echo -e "${GREEN}✅ Ready to commit${NC}"
     echo "Staged changes:"
     git status --short | grep '^[MARC]'
+
+    # Show unstaged/untracked if present (informational only)
+    if [[ "$has_unstaged" == "true" ]] || [[ "$has_untracked" == "true" ]]; then
+        echo ""
+        echo -e "${CYAN}ℹ️  Note: Unstaged/untracked changes will not be included in this commit${NC}"
+    fi
+
     return 0
 }
 
