@@ -153,7 +153,7 @@ Each major component has detailed architecture documentation in its respective `
 The installer validates and guides installation of all required tools:
 - **Core tools**: `stow`, `starship`, `git`, `zsh`, `luarocks`, `rg`, `brew`
 - **Containerization**: `docker` (version 28+)
-- **Editors**: `nvim`, `tmux`  
+- **Editors**: `nvim`, `tmux`, `tig`
 - **Version managers**: `nvm`, `gvm`, `rustup`
 - **Security tools**: `gpg`
 

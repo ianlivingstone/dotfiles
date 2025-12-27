@@ -111,6 +111,10 @@ check_dependencies() {
         missing_deps+=("tmux")
     fi
 
+    if ! command -v tig &> /dev/null; then
+        missing_deps+=("tig")
+    fi
+
     # Note: Python is managed by uv (checked in shell/uv.sh module)
 
     # Check for Go tools (can be auto-installed)
@@ -239,6 +243,9 @@ check_dependencies() {
                     ;;
                 "tmux")
                     echo -e "  ${RED}•${NC} Tmux: brew install tmux"
+                    ;;
+                "tig")
+                    echo -e "  ${RED}•${NC} Tig: brew install tig"
                     ;;
                 "gopls")
                     echo -e "  ${RED}•${NC} gopls: go install golang.org/x/tools/gopls@latest"

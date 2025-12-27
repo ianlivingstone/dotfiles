@@ -51,7 +51,7 @@ The installer checks for these and provides install commands if missing:
 
 **Required Tools:**
 ```bash
-brew install stow starship luarocks ripgrep neovim tmux
+brew install stow starship luarocks ripgrep neovim tmux tig
 brew install --cask docker
 ```
 

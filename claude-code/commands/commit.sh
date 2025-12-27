@@ -9,6 +9,7 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Function to check if we're in a git repository
@@ -17,6 +18,44 @@ check_git_repo() {
         echo -e "${RED}❌ Error: Not a git repository${NC}" >&2
         exit 1
     fi
+}
+
+# Function to check if GPG signing is required
+is_gpg_signing_required() {
+    # Check commit.gpgsign config
+    local gpg_sign=$(git config --get commit.gpgsign 2>/dev/null || echo "false")
+    [[ "$gpg_sign" == "true" ]]
+}
+
+# Function to check if GPG agent is working
+is_gpg_agent_working() {
+    # Check if gpg command exists
+    if ! command -v gpg &>/dev/null; then
+        return 1
+    fi
+
+    # Check if gpg-agent is running
+    if ! pgrep -x "gpg-agent" > /dev/null 2>&1; then
+        return 1
+    fi
+
+    # Check if agent is responsive
+    if ! gpg-connect-agent --quiet /bye &>/dev/null; then
+        return 1
+    fi
+
+    # Check if signing key is configured
+    local signing_key=$(git config --get user.signingkey 2>/dev/null)
+    if [[ -z "$signing_key" ]]; then
+        return 1
+    fi
+
+    # Check if the key exists and is usable
+    if ! gpg --list-secret-keys "$signing_key" &>/dev/null; then
+        return 1
+    fi
+
+    return 0
 }
 
 # Function to check for staged changes
@@ -139,15 +178,55 @@ create_commit() {
         exit 1
     fi
 
-    if git commit -F "$msg_file"; then
-        echo -e "${GREEN}✅ Commit created successfully${NC}"
-        echo ""
-        git log -1 --pretty=format:"%C(yellow)%h%Creset %s"
-        echo ""
-        return 0
+    # Check if GPG signing is required
+    if is_gpg_signing_required; then
+        echo -e "${CYAN}🔐 GPG signing is required for commits${NC}"
+
+        # Check if GPG agent is working
+        if is_gpg_agent_working; then
+            echo -e "${GREEN}✅ GPG agent is running and key is available${NC}"
+            echo -e "${BLUE}Attempting to commit...${NC}"
+            echo ""
+
+            if git commit -F "$msg_file"; then
+                echo ""
+                echo -e "${GREEN}✅ Commit created successfully${NC}"
+                echo ""
+                git log -1 --pretty=format:"%C(yellow)%h%Creset %s"
+                echo ""
+                return 0
+            else
+                echo -e "${RED}❌ Commit failed${NC}" >&2
+                return 1
+            fi
+        else
+            # GPG agent not working - save message and provide instructions
+            echo -e "${YELLOW}⚠️  GPG agent is not properly configured${NC}"
+            echo ""
+            echo -e "${CYAN}Commit message saved to: $msg_file${NC}"
+            echo ""
+            echo -e "${YELLOW}To complete the commit, run:${NC}"
+            echo -e "${BLUE}git commit -F \"$msg_file\"${NC}"
+            echo ""
+            echo -e "${CYAN}💡 Troubleshooting GPG:${NC}"
+            echo "  • Check GPG agent: gpg-connect-agent /bye"
+            echo "  • Verify signing key: git config user.signingkey"
+            echo "  • List secret keys: gpg --list-secret-keys"
+            echo "  • Start GPG agent: gpgconf --launch gpg-agent"
+            return 1
+        fi
     else
-        echo -e "${RED}❌ Commit failed${NC}" >&2
-        return 1
+        # No GPG signing required
+        if git commit -F "$msg_file"; then
+            echo -e "${GREEN}✅ Commit created successfully${NC}"
+            echo ""
+            git log -1 --pretty=format:"%C(yellow)%h%Creset %s"
+            echo ""
+            return 0
+        else
+            echo -e "${RED}❌ Commit failed${NC}" >&2
+            return 1
+        fi
     fi
 }
 
