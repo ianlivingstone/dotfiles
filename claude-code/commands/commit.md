@@ -9,8 +9,10 @@ Analyzes staged changes and generates commit messages with intelligent GPG handl
 ## Instructions
 
 1. Run `~/.claude/commands/commit.sh` to gather commit context
-2. Write the commit message to a temporary file
+2. Write the commit message to a unique temporary file: `/tmp/commit-msg-$RANDOM.txt`
 3. Call `~/.claude/commands/commit.sh commit <message-file>` to create the commit
+
+**Important:** Always use a unique filename (e.g., with `$RANDOM`) to avoid race conditions when multiple commits are being prepared.
 
 The script will:
 - Check if GPG signing is required (via `git config commit.gpgsign`)
