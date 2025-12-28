@@ -65,10 +65,10 @@ is_gpg_agent_working() {
 test_gpg_signing() {
     local signing_key=$(git config --get user.signingkey 2>/dev/null)
 
-    # Try a test sign operation with --batch and --no-tty flags
-    # If passphrase is cached in gpg-agent, this will succeed immediately
-    # If passphrase is needed, this will fail without prompting
-    echo "test" | gpg --sign --local-user "$signing_key" --batch --no-tty -o /dev/null 2>/dev/null
+    # Use --pinentry-mode loopback to prevent pinentry from being launched
+    # This forces GPG to fail immediately if passphrase is not cached
+    # See: https://dev.gnupg.org/T4677
+    echo "test" | gpg --sign --local-user "$signing_key" --batch --no-tty --pinentry-mode loopback -o /dev/null 2>/dev/null
     return $?
 }
 

@@ -6,13 +6,21 @@ description: Generate commit message and commit staged changes
 
 Create commits with AI-generated messages and intelligent GPG handling.
 
-## Usage
+## Workflow
+
+**IMPORTANT: Always validate before committing!**
+
+1. **Discover validation approach** for this repository:
+   - Check for repository-specific slash commands (e.g., /validate, /test)
+   - Read README.md or CONTRIBUTING.md for validation instructions
+   - Check for pre-commit hooks (.git/hooks/pre-commit)
+   - Look at CI workflows (.github/workflows/*) to understand what checks run
+
+2. **Run appropriate validation** based on what you discover
+
+3. **Only if validation passes**, proceed with commit:
 
 ```bash
-# 1. Get commit context and guidelines
-~/.claude/commands/commit.sh
-
-# 2. Pipe commit message directly to commit command
 cat <<'EOF' | ~/.claude/commands/commit.sh commit
 Your commit message here
 
@@ -21,10 +29,3 @@ Your commit message here
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 EOF
 ```
-
-**Alternative:** Pass message via file
-```bash
-~/.claude/commands/commit.sh commit /path/to/message.txt
-```
-
-The script handles GPG signing detection automatically. If passphrase is cached, commits proceed automatically. If not, instructions are provided. No temporary files needed when using stdin!
