@@ -22,6 +22,7 @@ shell/
 ├── aliases.sh          # Command aliases
 ├── languages.sh        # Programming language environments
 ├── functions.sh        # Utility functions & status reporting
+├── jj.sh               # Jujutsu (jj) integration and helpers
 ├── security.sh         # Security validation
 ├── agents.sh           # SSH and GPG agent management
 ├── prompt.sh           # Shell prompt configuration
@@ -37,9 +38,10 @@ shell/
 3. **`aliases.sh`** - Command shortcuts
 4. **`languages.sh`** - Programming environments (NVM, GVM, Rust)
 5. **`functions.sh`** - Status reporting and utility functions
-6. **`security.sh`** - Key validation and security checks
-7. **`agents.sh`** - SSH/GPG agent management
-8. **`prompt.sh`** - Shell prompt and status display
+6. **`jj.sh`** - Jujutsu integration (optional, loaded if jj is installed)
+7. **`security.sh`** - Key validation and security checks
+8. **`agents.sh`** - SSH/GPG agent management
+9. **`prompt.sh`** - Shell prompt and status display
 
 ## Key Design Features
 
@@ -59,6 +61,22 @@ Dedicated modules for each language environment:
 - **Centralized configuration** in `versions.config`
 - **Unified update system** via `dotfiles update`
 - **Proper PATH management** ensuring binaries are available
+
+### Jujutsu Integration Module (`jj.sh`)
+Optional module providing helper functions for jj (Jujutsu) version control:
+
+- **Conditional loading** - Only loads if jj is installed
+- **Repository detection** - `is_jj_repo()` checks for jj working copy
+- **Type detection** - `repo_type()` identifies git, jj, or git+jj (colocated)
+- **Easy initialization** - `jj_init` or `jj-init` to enable jj in git repos
+- **Status helper** - `repo_status` shows both git and jj status in colocated repos
+- **Convenience aliases** - `repo-type`, `jj-status` for quick access
+
+**Key Features:**
+- MUST detect colocated repositories (git+jj sharing .git directory)
+- SHOULD provide clear feedback about repository type
+- MUST only load if jj command is available
+- SHOULD integrate seamlessly with git workflows
 
 ### Performance Optimizations
 - **No expensive operations** during shell startup

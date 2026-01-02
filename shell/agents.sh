@@ -103,4 +103,9 @@ start_gpg_agent() {
 
 # Start agents
 start_ssh_agent
-start_gpg_agent
+
+# Start GPG agent asynchronously for faster shell startup
+# The agent will be ready shortly after shell starts
+{
+    start_gpg_agent
+} &|

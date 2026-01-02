@@ -16,6 +16,16 @@ eval $(brew shellenv)
 # Fix compinit security check
 ZSH_DISABLE_COMPFIX=true
 
-# Initialize completion system properly
+# Initialize completion system with caching
+# Only rebuild completion dump once per day for faster startup
 autoload -Uz compinit
-compinit -u
+setopt EXTENDEDGLOB
+local zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
+if [[ -n $zcompdump(#qNmh-20) ]]; then
+    # Dump file is less than 20 hours old, skip rebuild
+    compinit -C -u
+else
+    # Rebuild completion dump
+    compinit -u
+fi
+unsetopt EXTENDEDGLOB

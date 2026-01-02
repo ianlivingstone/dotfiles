@@ -36,6 +36,11 @@ source "$SHELL_DIR/languages.sh"
 # Utility functions (load early so they're always available)
 source "$SHELL_DIR/functions.sh"
 
+# Jujutsu (jj) integration
+if command -v jj &> /dev/null; then
+    source "$SHELL_DIR/jj.sh"
+fi
+
 # Security validation (must run before agents)
 # Note: This is now non-blocking - warnings shown but shell continues
 source "$SHELL_DIR/security.sh"

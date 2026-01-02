@@ -1,0 +1,93 @@
+# Jujutsu (jj) Configuration
+# https://github.com/martinvonz/jj
+#
+# This configuration sets up jj to work on top of git repositories,
+# with git as the source of truth. jj provides a better UX for complex
+# workflows while git remains the underlying storage and collaboration layer.
+#
+# Usage: Run 'jj git init --colocate' in existing git repos or just use 'jj'
+# commands directly - jj will detect and work with the git repo.
+
+[user]
+# User identity for commits
+# These will be read from git config if not set here
+name = "Ian Livingstone"
+email = "ian@keycard.ai"
+
+[ui]
+# Use delta for diff viewing (if available, fallback to less)
+pager = "delta"
+# Default editor
+editor = "nvim"
+# Show relative timestamps
+relative-timestamps = true
+# Diff format
+diff.format = "git"
+
+[colors]
+# Enable colors in terminal output
+enabled = true
+
+[aliases]
+# Convenience aliases
+st = ["status"]
+l = ["log", "-r", "::@"]
+ll = ["log"]
+d = ["diff"]
+ds = ["diff", "--stat"]
+s = ["show"]
+n = ["new"]
+co = ["checkout"]
+desc = ["describe"]
+e = ["edit"]
+sp = ["split"]
+sq = ["squash"]
+rb = ["rebase"]
+
+# Show graph with nice formatting
+graph = ["log", "--graph", "-r", "::@"]
+lg = ["log", "--graph"]
+
+# Quick commit with message
+cm = ["commit", "-m"]
+
+# Branch management
+branches = ["branch", "list"]
+track = ["branch", "track"]
+
+# Git interop aliases (jj working on top of git)
+fetch = ["git", "fetch"]
+push = ["git", "push"]
+pull = ["git", "fetch"]
+sync = ["git", "fetch", "--all-remotes"]
+
+[revsets]
+# Log shows last 10 commits by default
+log = "@ | ancestors(immutable_heads().., 10) | trunk()"
+
+[template-aliases]
+# Customize commit log format
+"format_short_id(id)" = "id.shortest(8)"
+"format_timestamp(timestamp)" = "timestamp.ago()"
+
+[git]
+# Git as source of truth - colocated repository settings
+# This makes jj work seamlessly on top of existing git repos
+
+# Automatically create local branches for remote branches
+auto-local-branch = true
+
+# No prefix for pushed branches (git compatibility)
+push-branch-prefix = ""
+
+# Abandon commits that have been rewritten in git
+abandon-unreachable-commits = true
+
+[snapshot]
+# Automatically snapshot working copy changes
+auto-update-working-copy = true
+
+[merge-tools]
+# Use neovim as merge tool
+vimdiff.program = "nvim"
+vimdiff.merge-args = ["-d", "$left", "$base", "$right", "-c", "wincmd J", "-c", "set modifiable", "-c", "set write"]
