@@ -600,9 +600,9 @@ Use `permissionMode` to control agent capabilities:
   "permissionMode": "acceptEdits",  // Allow file edits without approval
   "permissions": {
     "allow": [
-      "tool:Read",
-      "tool:Grep",
-      "tool:Glob",
+      "Tool:Read",
+      "Tool:Grep",
+      "Tool:Glob",
       "bash:git status",
       "bash:npm test"
     ],
@@ -1008,10 +1008,10 @@ Create `.claude/settings.json`:
   "permissionMode": "acceptEdits",
   "permissions": {
     "allow": [
-      "tool:Read",
-      "tool:Grep",
-      "tool:Glob",
-      "tool:TodoWrite",
+      "Tool:Read",
+      "Tool:Grep",
+      "Tool:Glob",
+      "Tool:TodoWrite",
       "bash:git status",
       "bash:git log",
       "bash:git diff",

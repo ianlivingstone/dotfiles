@@ -202,10 +202,10 @@ When configuring permissions and hooks:
      "permissionMode": "acceptEdits",
      "permissions": {
        "allow": [
-         "tool:Read",
-         "tool:Grep",
-         "tool:Glob",
-         "tool:TodoWrite",
+         "Tool:Read",
+         "Tool:Grep",
+         "Tool:Glob",
+         "Tool:TodoWrite",
          "bash:git status",
          "bash:git log",
          "bash:git diff",

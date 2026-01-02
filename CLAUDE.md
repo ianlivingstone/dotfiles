@@ -201,7 +201,7 @@ For current security issues and fixes:
 Use `.claude/settings.json` for all Claude Code configuration including permissions and hooks.
 
 **MUST include in permissions.allow:**
-- Safe read-only tools (tool:Read, tool:Grep, tool:Glob, tool:LS, tool:TodoWrite)
+- Safe read-only tools (Tool:Read, Tool:Grep, Tool:Glob, Tool:LS, Tool:TodoWrite)
 - Safe bash commands (bash:ls, bash:pwd, bash:cd, bash:cat, bash:head, bash:tail)
 - Read-only git commands (bash:git status, bash:git log, bash:git diff)
 - Read-only system commands (bash:npm --version, bash:brew list)
@@ -218,7 +218,7 @@ Use `.claude/settings.json` for all Claude Code configuration including permissi
 {
   "permissions": {
     "allow": [
-      "tool:Read", "tool:Grep", "tool:Glob", "tool:LS", "tool:TodoWrite",
+      "Tool:Read", "Tool:Grep", "Tool:Glob", "Tool:LS", "Tool:TodoWrite",
       "bash:git status", "bash:git log", "bash:git diff",
       "bash:tmux list-*", "bash:tmux show-*",
       "bash:./dotfiles.sh status",
