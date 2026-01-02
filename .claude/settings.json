@@ -13,14 +13,18 @@
       "tool:Task",
       "tool:WebSearch",
       "tool:WebFetch",
-      "bash:git status*",
-      "bash:git log*",
-      "bash:git diff*",
-      "bash:git add*",
-      "bash:~/.claude/commands/*",
-      "bash:COMMIT_FILE=*",
-      "bash:echo*",
-      "bash:wc -l*"
+      "Bash:git status*",
+      "Bash:git log*",
+      "Bash:git diff*",
+      "Bash:git add*",
+      "Bash:~/.claude/commands/*",
+      "Bash:COMMIT_FILE=*",
+      "Bash:echo*",
+      "Bash:wc -l*"
+    ],
+    "deny": [
+      "Bash:git commit*--no-gpg-sign*",
+      "Bash:git commit*-n*"
     ]
   },
   "hooks": {

@@ -1,10 +1,10 @@
 {
-  "alwaysThinkingEnabled": false,
+  "alwaysThinkingEnabled": true,
   "autoUpdate": false,
   "permissions": {
     "deny": [
-      "bash:git commit*--no-gpg-sign*",
-      "bash:git commit*-n*"
+      "Bash:git commit*--no-gpg-sign*",
+      "Bash:git commit*-n*"
     ]
   }
 }

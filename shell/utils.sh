@@ -91,68 +91,61 @@ install_npm_globals() {
     # Temporarily disable strict mode for this function (using local scope)
     local saved_errexit="" saved_nounset="" saved_pipefail=""
     [[ $- == *e* ]] && saved_errexit="e"
-    [[ $- == *u* ]] && saved_nounset="u" 
+    [[ $- == *u* ]] && saved_nounset="u"
     [[ $- == *o* ]] && saved_pipefail="o pipefail"
     set +euo pipefail
     trap - ERR
-    
+
     local package_json="$1"
-    
+
     if [[ ! -f "$package_json" ]]; then
         echo "⚠️  Global packages config not found: $package_json"
         return 1
     fi
-    
-    echo "📦 Installing global npm packages from $(basename "$package_json")..."
-    
-    # Use npm to install all dependencies globally
-    # Create a temp directory and copy the package.json there
-    local temp_dir=$(mktemp -d)
-    chmod 700 "$temp_dir"
-    trap "rm -rf '$temp_dir'" EXIT INT TERM
-    cp "$package_json" "$temp_dir/package.json"
-    
-    # Change to temp directory and install all dependencies globally
-    (
-        cd "$temp_dir"
-        # Extract package names and install them globally
-        local packages_array=()
-        if command -v jq &>/dev/null; then
-            # Use jq to extract package names into an array
-            while IFS= read -r package; do
-                [[ -n "$package" ]] && packages_array+=("$package")
-            done < <(jq -r '.dependencies | keys[]' package.json 2>/dev/null)
-        else
-            # Fallback parsing
-            while IFS= read -r package; do
-                [[ -n "$package" ]] && packages_array+=("$package")
-            done < <(grep -A 20 '"dependencies"' package.json | grep -o '"[^"]*"' | grep -v "dependencies\|latest" | tr -d '"')
-        fi
-        
-        if [[ ${#packages_array[@]} -gt 0 ]]; then
-            # Check which packages need installation/update
-            local packages_to_install=()
-            
-            for package in "${packages_array[@]}"; do
-                if ! npm list -g "$package" >/dev/null 2>&1; then
-                    packages_to_install+=("$package")
-                fi
-            done
-            
-            if [[ ${#packages_to_install[@]} -gt 0 ]]; then
-                echo "  → Installing missing packages: ${packages_to_install[*]}"
-                npm install -g "${packages_to_install[@]}"
-            else
-                echo "  → All global packages already installed"
+
+    echo "📦 Installing/updating global npm packages from $(basename "$package_json")..."
+
+    if ! command -v jq &>/dev/null; then
+        echo "⚠️  jq not found. Installing jq is recommended for reliable package management."
+        echo "   Install with: brew install jq"
+        return 1
+    fi
+
+    # Extract package@version pairs from package.json
+    local packages_to_install=()
+    while IFS='@' read -r package version; do
+        if [[ -n "$package" ]] && [[ -n "$version" ]]; then
+            # Get currently installed version (if any)
+            local installed_version=""
+            if npm list -g "$package" >/dev/null 2>&1; then
+                installed_version=$(npm list -g "$package" --depth=0 2>/dev/null | grep "$package@" | sed 's/.*@//' | head -1)
             fi
-        else
-            echo "⚠️  No packages found in dependencies"
+
+            # Check if we need to install/update
+            if [[ -z "$installed_version" ]]; then
+                echo "  → $package: not installed, will install $version"
+                packages_to_install+=("$package@$version")
+            elif [[ "$installed_version" != "$version" ]]; then
+                echo "  → $package: $installed_version → $version (updating)"
+                packages_to_install+=("$package@$version")
+            else
+                echo "  ✓ $package@$version (already up to date)"
+            fi
         fi
-    )
-    
-    # Clean up temp directory
-    rm -rf "$temp_dir"
-    
+    done < <(jq -r '.dependencies | to_entries[] | "\(.key)@\(.value)"' "$package_json" 2>/dev/null)
+
+    # Install/update packages if needed
+    if [[ ${#packages_to_install[@]} -gt 0 ]]; then
+        echo ""
+        echo "Installing/updating ${#packages_to_install[@]} package(s)..."
+        npm install -g "${packages_to_install[@]}"
+        echo ""
+        echo "✅ Global packages updated successfully!"
+    else
+        echo ""
+        echo "✅ All global packages are already up to date!"
+    fi
+
     # Restore original shell options
     [[ -n "$saved_errexit" ]] && set -e
     [[ -n "$saved_nounset" ]] && set -u
