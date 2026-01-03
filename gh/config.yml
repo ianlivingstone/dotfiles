@@ -1,0 +1,23 @@
+# Default git protocol
+git_protocol: ssh
+# Preferred editor for gh commands
+editor: nvim
+# Default browser (empty means system default)
+browser: ""
+# Prompt behavior (enabled, disabled)
+prompt: enabled
+# Pager for output
+pager: delta
+# Default options for specific commands
+aliases:
+    co: pr checkout
+    pv: pr view
+    pc: pr create
+    rv: repo view
+    rc: repo clone
+    il: issue list
+    pl: pr list
+    st: status
+# HTTP timeout in seconds
+http_unix_socket: ""
+version: "1"

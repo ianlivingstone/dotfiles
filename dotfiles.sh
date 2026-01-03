@@ -17,8 +17,10 @@ XDG_CONFIG_DIR="$(get_xdg_config_dir)"
 # Read packages from config file
 PACKAGES=()
 while IFS= read -r line || [[ -n "$line" ]]; do
-    # Skip empty lines and comments
-    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    # Skip empty lines and comments (use if instead of && to avoid set -e issues)
+    if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+        continue
+    fi
     # Safe variable expansion without eval
     line="${line/#\~/$HOME}"
     line="${line//\$HOME/$HOME}"
@@ -316,7 +318,7 @@ detect_ssh_keys() {
     echo "  - Enter 'none' to skip SSH key setup"
     printf "Selection: "
     local selection=""
-    read -r selection
+    read -r selection < /dev/tty
     
     local selected_keys=()
     if [[ "$selection" == "all" ]]; then
@@ -349,16 +351,28 @@ detect_ssh_keys() {
 configure_git_user() {
     echo -e "${BLUE}👤 Configuring Git user information...${NC}"
     echo ""
-    
+
     # Initialize variables to avoid 'parameter not set' error with set -u
     local git_name=""
     local git_email=""
-    
+
+    # Check if git user is already configured globally (for reinstall)
+    local existing_name=$(git config --global user.name 2>/dev/null || echo "")
+    local existing_email=$(git config --global user.email 2>/dev/null || echo "")
+
+    if [[ -n "$existing_name" && -n "$existing_email" ]]; then
+        echo -e "${GREEN}✅ Using existing Git config: $existing_name <$existing_email>${NC}"
+        GIT_USER_NAME="$existing_name"
+        GIT_USER_EMAIL="$existing_email"
+        return 0
+    fi
+
     # Use printf instead of -p flag for better compatibility with strict mode
+    # Read from /dev/tty to ensure we get user input
     printf "Enter your full name for Git commits: "
-    read -r git_name
+    read -r git_name < /dev/tty
     printf "Enter your email address for Git commits: "
-    read -r git_email
+    read -r git_email < /dev/tty
     
     if [[ -z "${git_name:-}" || -z "${git_email:-}" ]]; then
         echo -e "${YELLOW}⚠️  Name and email are required for Git${NC}"
@@ -402,7 +416,7 @@ detect_gpg_keys() {
     echo "Select a key for Git commit signing (or 'none' to skip):"
     printf "Selection (number or 'none'): "
     local selection=""
-    read -r selection
+    read -r selection < /dev/tty
     
     if [[ "$selection" == "none" ]]; then
         return 1
@@ -589,7 +603,7 @@ configure_hostname() {
     
     printf "Enter new hostname (or press Enter to keep current): "
     local new_hostname=""
-    read -r new_hostname
+    read -r new_hostname < /dev/tty
     
     if [[ -z "${new_hostname:-}" ]]; then
         echo -e "${YELLOW}⚠️  Keeping current hostname: $current_hostname${NC}"
@@ -765,7 +779,12 @@ uninstall_dotfiles() {
         
         if [ -d "$package" ]; then
             echo "   Unstowing $package from $target..."
-            stow --delete --target="$target" "$package" 2>/dev/null || true
+            # Only unstow if target directory exists
+            if [ -d "$target" ]; then
+                stow --delete --target="$target" "$package" &>/dev/null || true
+            else
+                echo "      (target directory doesn't exist, skipping)"
+            fi
         fi
     done
     
@@ -919,7 +938,7 @@ build_hooks() {
     else
         # Check if source is newer than binaries
         if [[ -d "$src_dir" ]]; then
-            local newest_src=$(find "$src_dir" -type f -newer "$bin_dir" 2>/dev/null | head -1)
+            local newest_src=$(find "$src_dir" -type f -newer "$bin_dir" 2>/dev/null | head -1 || true)
             if [[ -n "$newest_src" ]]; then
                 needs_build=true
             fi
