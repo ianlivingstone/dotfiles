@@ -9,7 +9,6 @@ export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 
 # General Config
-export PATH=/opt/homebrew/bin:$PATH
 export GPG_TTY=$(tty)
 eval $(brew shellenv)
 
