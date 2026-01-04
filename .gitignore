@@ -30,3 +30,4 @@ claude_hooks/bin/
 # Any accidentally created machine configs in wrong location
 **/machine.config
 **/machines/
+.claude/hook-output.log

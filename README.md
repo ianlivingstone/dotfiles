@@ -69,27 +69,20 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ## 📋 Version Management
 
-All tool versions are centrally managed in `versions.config`:
+Your tool versions are automatically managed and validated:
 
 ```bash
-# Core system tools (required)
-git:2.40
-docker:28.0
-nvim:0.9
-
-# Programming languages (required)  
-node:v24.1.0
-go:go1.24.1
-
-# Development managers (required)
-nvm:0.39
-gvm:1.0
-rustup:1.25
+./dotfiles.sh status    # Check if all tools meet requirements
+./dotfiles.sh update    # Update Node.js and Go to latest specified versions
 ```
 
-- **Status checking**: `./dotfiles.sh status` validates all tools meet minimum versions
-- **Automatic updates**: `./dotfiles.sh update` installs/updates Node.js and Go to specified versions
-- **Team consistency**: Version requirements are shared across all machines via git
+**What this gives you:**
+- Automatic validation that you have the right tool versions
+- One command to update Node.js and Go across all machines
+- Consistent development environment with your team
+- Clear warnings if any tool is outdated
+
+Version requirements are defined in `versions.config` and shared across all machines.
 
 ## 🛠️ Management Commands
 
@@ -196,114 +189,29 @@ Every new shell shows a one-line summary:
 - **Required GPG signing** for all commits and tags
 - **Secure defaults** for all network operations
 
-## 🏗️ Architecture
+## 🤝 Customization
 
-This dotfiles system uses a **layered configuration approach**:
+Want to add your own tools to this dotfiles system?
 
-- **Base configurations** live in this git repository (shareable settings)
-- **Machine-specific data** lives in `~/.config/` (private, never in git)
-- **Native tool includes** handle the layering (Git `[include]`, SSH `Include`)
+1. Create a directory with your config files
+2. Add the directory name to `packages.config`
+3. Run `./dotfiles.sh reinstall`
 
-For detailed information about the design principles and architecture decisions, see [ARCHITECTURE.md](ARCHITECTURE.md).
-
-## 🤝 Customization & Package Management
-
-### 📦 Adding New Packages
-
-To add a new package (e.g., `vscode`):
-
-1. **Create package directory**:
-   ```bash
-   mkdir vscode
-   ```
-
-2. **Add configuration files**:
-   ```bash
-   # For files that go to ~/
-   echo "config content" > vscode/settings.json
-   
-   # For files that go to ~/.config/vscode/
-   mkdir -p vscode/.config/vscode
-   echo "config content" > vscode/.config/vscode/settings.json
-   ```
-
-3. **Add to packages.config**:
-   ```bash
-   # Add at the end of packages.config
-   echo "vscode" >> packages.config
-   
-   # Or for custom target location:
-   echo "vscode:$XDG_CONFIG_DIR/vscode" >> packages.config
-   ```
-
-4. **Test installation**:
-   ```bash
-   ./dotfiles.sh status    # Should show new package
-   ./dotfiles.sh reinstall # Install new package
-   ```
-
-### 🗑️ Removing Packages
-
-To remove a package (e.g., `tmux`):
-
-1. **Remove from packages.config**:
-   ```bash
-   # Edit packages.config and delete the line containing "tmux"
-   vim packages.config
-   ```
-
-2. **Uninstall and reinstall**:
-   ```bash
-   ./dotfiles.sh reinstall  # Removes old packages, installs current ones
-   ```
-
-3. **Optionally delete package directory**:
-   ```bash
-   rm -rf tmux/  # Only if you don't want it available
-   ```
-
-### 🎯 Package Targets
-
-The `packages.config` format supports custom targets:
-
+**Example - Adding VSCode configs:**
 ```bash
-# Default target (~/):
-git
-ssh
-tmux
-
-# Custom targets:
-nvim:$XDG_CONFIG_DIR/nvim           # Goes to ~/.config/nvim/
-gnupg:$HOME/.gnupg                  # Goes to ~/.gnupg/
-myapp:$HOME/.local/share/myapp      # Goes to ~/.local/share/myapp/
+mkdir vscode
+# Add your config files to the vscode/ directory
+echo "vscode" >> packages.config
+./dotfiles.sh reinstall
 ```
 
-**Variables available**:
-- `$HOME` - Your home directory
-- `$XDG_CONFIG_DIR` - Usually `~/.config`
-- Any other environment variables
+That's it! Your configs are now managed alongside everything else.
 
-### 🔧 Status Checking
-
-The status command automatically validates all packages using Stow's own logic:
-```bash
-./dotfiles.sh status
-# ✅ git → properly stowed to /Users/ian
-# ❌ nvim → would make changes: LINK: init.lua
-# ⚠️  missing → package directory not found
-```
-
-This ensures the status reflects exactly what Stow would do, with no guesswork.
-
-**Key Benefits**:
-- **Single source of truth**: All packages defined in `packages.config`
-- **Stow-validated**: Status uses Stow's own validation logic  
-- **Flexible targets**: Each package can go to a different location
-- **Zero duplication**: Add once in config, works everywhere
+For advanced customization and package management details, see [CLAUDE.md](CLAUDE.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## 🛠️ Development Tools
 
 ### 🔗 **Claude Code Integration**
-Custom Rust hooks automatically enhance your workflow (whitespace cleanup, formatting, etc.). Built with `./claude_hooks/build-hooks.sh` from modular hook crates in `claude_hooks/hooks/`.
+Custom Rust hooks automatically enhance your workflow with whitespace cleanup, formatting, and code quality improvements.
 
 The separation between shared and machine-specific configuration means you can safely share your fork while keeping personal data private.

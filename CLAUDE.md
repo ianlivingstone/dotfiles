@@ -2,276 +2,205 @@
 
 This is a bash/shell-based dotfiles management system for macOS using GNU Stow.
 
-**📋 AGENTS.md Compliance**: This file follows the Agent Rules specification for AI coding agents. All sections use imperative statements with RFC 2119 keywords (MUST, SHOULD, MAY) and flat bullet list format for scannable rules.
-
-**📖 For architecture and design principles**: Read [ARCHITECTURE.md](ARCHITECTURE.md)
-**📖 For user documentation and features**: Read [README.md](README.md)
-
-This CLAUDE.md focuses on bash-specific development guidance and conventions following Agent Rules format.
-
-## Project Type & Environment
+## Quick Reference
 
 - **Language**: Bash/Zsh shell scripts
-- **Platform**: macOS (Darwin)  
+- **Platform**: macOS (Darwin)
 - **Package Manager**: GNU Stow for symlink management
-- **Shell**: Zsh with modular configuration
 - **Security**: GPG signing required, SSH key validation
-- **Version Management**: Centralized in `versions.config` with validation
-- **Architecture**: Distributed documentation in per-directory `AGENTS.md` files
+- **Architecture**: Distributed docs in docs/ and component AGENTS.md files
 
-## Key Commands for Development
+## Repository Navigation
+
+**Core files:**
+- `dotfiles.sh` - Main management script (install, status, update, reinstall)
+- `packages.config` - Package list with target locations
+- `versions.config` - Version requirements for all tools
+
+**Documentation:**
+- `README.md` - User documentation and features
+- `ARCHITECTURE.md` - High-level design principles
+- **`docs/`** - Detailed development guides (READ THIS FOR DETAILS)
+- `[component]/AGENTS.md` - Component-specific implementation
+
+**For detailed information:**
+- Read ARCHITECTURE.md FIRST for design principles
+- Read docs/ files for specific topics (see decision tree below)
+- Read component AGENTS.md for implementation details
+
+## Finding Information - Decision Tree
+
+### Adding New Features
+**→ Read:** `docs/development/adding-features.md` (CRITICAL - has feature integration checklist)
+**→ Use:** product-manager agent for planning
+**→ Use:** architecture-assistant agent for design
+
+### GNU Stow Packages
+**→ Read:** `docs/development/package-management.md`
+**→ Use:** architecture-assistant agent
+
+### Shell Scripts
+**→ Read:** `docs/development/shell-patterns.md`
+**→ Read:** `shell/AGENTS.md`
+**→ Use:** shell-validator agent
+
+### Security
+**→ Read:** `docs/security/patterns.md`
+**→ Read:** `docs/security/multi-machine.md`
+**→ Use:** security-auditor agent
+
+### Testing/Debugging
+**→ Read:** `docs/development/testing-debugging.md`
+
+### dotfiles.sh Commands
+**→ Read:** `docs/reference/dotfiles-commands.md`
+
+### Version Management
+**→ Read:** `docs/development/version-management.md`
+**→ Read:** `shell/AGENTS.md`
+
+### macOS Patterns
+**→ Read:** `docs/development/macos-patterns.md`
+
+### Claude Code Integration
+**→ Read:** `docs/development/claude-code-integration.md`
+
+### Architecture & Design
+**→ Read:** `docs/architecture/overview.md`
+**→ Read:** `ARCHITECTURE.md`
+
+### Security Auditing
+**→ Read:** `docs/security/auditing.md`
+**→ Use:** security-auditor agent
+
+## Essential Rules (NEVER violate these)
+
+### Security
+- **NEVER** commit credentials, API keys, or personal data
+- **ALWAYS** use machine.config in ~/.config/ for personal data
+- **ALWAYS** validate file permissions (600 for keys, 700 for sensitive dirs)
+- **ALWAYS** use secure curl: `curl --proto '=https' --tlsv1.2`
+- **ALWAYS** quote variables in shell scripts: `"$variable"`
+
+### Architecture
+- **MUST** use GNU Stow for package management
+- **MUST** separate machine-specific from shared configs
+- **MUST** use native tool includes for layering (Git [include], SSH Include)
+- **MUST** update install/reinstall/update workflows when adding features
+
+### Documentation
+- **MUST** update docs/ when changing patterns
+- **MUST** update component AGENTS.md for component changes
+- **MUST** follow Agent Rules specification (RFC 2119, imperative statements)
+- **MUST** verify links work after changes
+
+### Development
+- **ALWAYS** quote variables: `"$variable"`
+- **ALWAYS** validate user input before use
+- **ALWAYS** check dependencies exist: `command -v tool`
+- **ALWAYS** test install → reinstall → update cycle
+- **NEVER** use eval with user input
+- **NEVER** hardcode credentials or personal data
+
+## Key Commands
 
 ```bash
-# Test changes
-./dotfiles.sh status          # Validates all packages using Stow logic
+./dotfiles.sh status          # Check installation & version compliance
+./dotfiles.sh install         # Initial installation (prompts for identity)
 ./dotfiles.sh reinstall       # Safe way to test package changes
-
-# Debug shell modules
-source shell/module.sh        # Test individual modules
-echo $SHELL_DIR              # Check path resolution
-
-# Dependency management
-./dotfiles.sh install         # Checks all dependencies including Docker 28+
-./dotfiles.sh update          # Updates Node.js, Go versions from versions.config
-
-# Add new packages
-echo "mypackage" >> packages.config  # Default target (~/)
-echo "mypackage:$XDG_CONFIG_DIR/mypackage" >> packages.config  # Custom target
+./dotfiles.sh update          # Update Node.js, Go to versions.config
+./dotfiles.sh uninstall       # Remove all symlinks
 ```
 
-## Development Patterns
+## Machine-Specific Configuration Pattern
 
-For detailed development patterns and implementation guidelines:
+**MUST store personal data in XDG directories, NEVER in repository:**
+- Git identity: `~/.config/git/machine.config`
+- SSH keys: `~/.config/ssh/machine.config`
+- GPG keys: Referenced in git machine.config
 
-- **🐚 Shell Development**: See [`shell/AGENTS.md`](shell/AGENTS.md) for bash/zsh patterns, path resolution, error handling
-- **📦 Package Management**: See [`shell/AGENTS.md`](shell/AGENTS.md) for GNU Stow patterns and validation
-- **🔐 Security Patterns**: See [`shell/AGENTS.md`](shell/AGENTS.md) for credential handling, input validation
-- **📋 Version Management**: See [`shell/AGENTS.md`](shell/AGENTS.md) for centralized version requirements
+**MUST use native tool includes:**
+- Git: `[include] path = ~/.config/git/machine.config`
+- SSH: `Include ~/.config/ssh/machine.config`
 
-## macOS-Specific Considerations
+**MUST ensure in .gitignore:**
+- `.config/git/machine.config`
+- `.config/ssh/machine.config`
+- `~/.ssh/id_*`
+- `~/.gnupg/`
 
-### Homebrew Integration
-```bash
-# ✅ Check for Homebrew tools
-if ! command -v tool &> /dev/null; then
-    echo "Install with: brew install tool"
-fi
+## Sub-Agent Coordination
 
-# ✅ macOS hostname commands
-hostname -s              # Short hostname
-scutil --set HostName    # Set system hostname
-```
+Repository includes four specialized agents (see `.claude/agents/README.md`):
 
-### XDG Directory Handling
-```bash
-# ✅ macOS-compatible XDG paths
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
-```
+**product-manager**: Feature planning, UX oversight, workflow integration
+- Use when: Adding features, planning changes, reviewing UX
+- Reads: docs/development/adding-features.md
 
-### Security on macOS
-```bash
-# ✅ Secure curl pattern (enforced throughout project)
-SECURE_CURL="curl --proto '=https' --tlsv1.2"
+**architecture-assistant**: Code architecture decisions
+- Use when: Designing packages, organizing code, structural changes
+- Reads: docs/architecture/overview.md, docs/development/package-management.md
 
-# ✅ File permissions
-chmod 700 ~/.gnupg       # GPG directory
-chmod 600 config-file    # Private configs
-mkdir -p ~/.ssh/sockets && chmod 700 ~/.ssh/sockets
-```
+**shell-validator**: Bash/zsh validation
+- Use when: Writing/reviewing shell scripts
+- Reads: docs/development/shell-patterns.md, docs/security/patterns.md
 
-## Testing Patterns
-
-### Manual Testing
-```bash
-# Test individual modules
-source shell/security.sh && validate_key_security
-
-# Test package status
-./dotfiles.sh status
-
-# Fresh installation test
-rm -rf ~/.local/share/nvim && nvim  # Auto-bootstraps
-```
-
-### Validation Checks
-```bash
-# ✅ Always validate before proceeding
-if ! validate_key_security; then
-    echo "Security validation failed"
-    return 1
-fi
-```
-
-## Debug Commands
-
-```bash
-# Shell module debugging
-set -x                   # Enable debug output
-source shell/module.sh   # Test module loading
-
-# Stow debugging
-stow --verbose --no --restow package  # Dry run with details
-
-# Environment debugging
-env | grep DOTFILES     # Check cache variables
-echo $PATH | tr ':' '\n'  # Check PATH entries
-```
-
-## Security Development Guidelines
-
-For detailed security patterns and implementation:
-- **🔐 Security Architecture**: See [`shell/AGENTS.md`](shell/AGENTS.md) for comprehensive security patterns, credential handling, input validation, and permission management
-
-## Version Management
-
-For centralized version management architecture:
-- **📋 Version Management**: See [`shell/AGENTS.md`](shell/AGENTS.md) for centralized version requirements, validation patterns, and shell module integration
+**security-auditor**: Security scanning
+- Use when: Security reviews, auditing code
+- Reads: docs/security/patterns.md, docs/security/auditing.md
 
 ## Documentation Architecture
 
-This project uses **distributed architecture documentation** following Agent Rules specification.
+**CLAUDE.md (this file, 200 lines):**
+- Quick reference and navigation
+- Essential rules
+- Decision tree for finding information
 
-### Agent Rules Compliance for Documentation
-- MUST follow Agent Rules specification for all AI agent guidance files
-- MUST use imperative statements with RFC 2119 keywords (MUST, SHOULD, MAY, NEVER)
-- MUST use flat bullet list format for scannable rules
-- MUST keep documentation current with code changes
-- SHOULD reference detailed documentation files rather than duplicating content
+**docs/ (detailed, task-oriented):**
+- Comprehensive development patterns (100-200 lines per file)
+- Security guidelines with examples
+- Architecture deep-dives
+- Testing strategies
 
-### Architecture File Structure
-```
-├── AGENTS.md                   # Agent Rules compliant quick reference
-├── ARCHITECTURE.md             # High-level project architecture (Agent Rules format)
-├── CLAUDE.md                   # Claude-specific guidelines (Agent Rules format)
-├── shell/AGENTS.md             # Shell configuration architecture
-├── nvim/AGENTS.md              # Neovim configuration architecture  
-├── git/AGENTS.md               # Git configuration architecture
-├── ssh/AGENTS.md               # SSH configuration architecture
-├── tmux/AGENTS.md              # Tmux configuration architecture
-├── claude_hooks/AGENTS.md      # Claude Code hooks architecture
-└── [component]/AGENTS.md       # Component-specific architecture
-```
+**ARCHITECTURE.md:**
+- High-level design principles
+- Why architectural choices were made
+- Component relationships
 
-### Documentation Maintenance Rules
+**Component AGENTS.md:**
+- Component-specific implementation
+- Integration points
+- Technical details
 
-#### When Making Changes
-- MUST update the component's `AGENTS.md` file when modifying that component
-- MUST update integration sections in related component `AGENTS.md` files for cross-component changes
-- MUST update `ARCHITECTURE.md` for high-level architectural changes
-- MUST verify all documentation links still work after changes
-- SHOULD include code examples that follow established patterns
+For more on documentation strategy: `docs/architecture/documentation-strategy.md`
 
-#### Agent Rules Format Requirements
-- MUST use imperative statements (e.g., "Update the file" not "You should update the file")
-- MUST use RFC 2119 keywords for clarity (MUST, SHOULD, MAY, NEVER)
-- MUST structure as flat bullet lists for scannability
-- MUST be concise and actionable
-- SHOULD reference comprehensive documentation files for details
+## Quick Start for Common Tasks
 
-#### Documentation Standards
-- MUST answer: Why was this architectural choice made?
-- MUST document: How does it integrate with other components?
-- MUST include: Key patterns and conventions
-- MUST specify: When to follow specific patterns
-- MUST identify: Integration points and dependencies
-- NEVER include: Outdated examples that don't match current codebase
-- NEVER create: Generic documentation that could apply to any project
+**Add new package:**
+1. Create package directory: `mkdir mypackage`
+2. Mirror target structure: `mypackage/.config/mypackage/config.yml`
+3. Add to packages.config: `echo "mypackage" >> packages.config`
+4. Test: `./dotfiles.sh status && ./dotfiles.sh reinstall`
 
-## Security Issues Reference
+**Modify existing package:**
+1. Edit files in package directory
+2. Reinstall: `./dotfiles.sh reinstall`
+3. Verify changes applied
 
-For current security issues and fixes:
-- **⚠️ Security Issues**: See [`shell/AGENTS.md`](shell/AGENTS.md) for critical command injection fixes, permission patterns, and safety mode requirements
-
-## Code Quality Standards
-
-- **Always quote variables**: `"$variable"`
-- **Use explicit returns**: `return 0` for success, `return 1` for failure
-- **Check dependencies**: Verify tools exist before using
-- **Graceful degradation**: Handle missing tools/configs
-- **Consistent error messages**: Use same format/colors
-- **Performance first**: Avoid expensive operations in shell startup
-- **Security first**: Validate input, secure credentials, audit actions
-
-## Claude Code Configuration Management
-
-### .claude/settings.json Configuration
-
-Use `.claude/settings.json` for all Claude Code configuration including permissions and hooks.
-
-**MUST include in permissions.allow:**
-- Safe read-only tools (Tool:Read, Tool:Grep, Tool:Glob, Tool:LS, Tool:TodoWrite)
-- Safe bash commands (bash:ls, bash:pwd, bash:cd, bash:cat, bash:head, bash:tail)
-- Read-only git commands (bash:git status, bash:git log, bash:git diff)
-- Read-only system commands (bash:npm --version, bash:brew list)
-- Repository-specific utilities (bash:./dotfiles.sh status, bash:~/tmux.sh get_battery_status)
-
-**NEVER include in permissions.allow:**
-- Destructive commands (bash:rm, bash:mv, bash:chmod)
-- Write operations (bash:git commit, bash:git push, bash:npm install)
-- System modification commands (bash:sudo *, bash:brew install)
-- Commands that modify state without explicit user consent
-
-**Example safe .claude/settings.json structure:**
-```json
-{
-  "permissions": {
-    "allow": [
-      "Tool:Read", "Tool:Grep", "Tool:Glob", "Tool:LS", "Tool:TodoWrite",
-      "bash:git status", "bash:git log", "bash:git diff",
-      "bash:tmux list-*", "bash:tmux show-*",
-      "bash:./dotfiles.sh status",
-      "bash:npm --version", "bash:brew list"
-    ]
-  },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -f \"$FILE_PATH\" ] && sed -i '' 's/[[:space:]]*$//' \"$FILE_PATH\" || true"
-          }
-        ]
-      }
-    ]
-  }
-}
+**Test changes:**
+```bash
+./dotfiles.sh status        # See what would change
+./dotfiles.sh reinstall     # Apply changes
+./dotfiles.sh status        # Verify properly stowed
 ```
 
-**Hook Guidelines:**
-- MUST use PostToolUse hooks for automatic cleanup (whitespace removal, formatting)
-- MUST include file existence checks in hook commands
-- MUST use safe command patterns that won't fail the hook system
-- SHOULD add hooks for common code quality improvements (linting, formatting)
-- NEVER add hooks that could corrupt files or cause data loss
+## Cross-References
 
-**Maintenance Guidelines:**
-- MUST update .claude/settings.json when adding new safe utility scripts
-- MUST review permissions periodically for security
-- SHOULD commit .claude/settings.json to share convenience with other users (if all entries are safe)
-- NEVER add permissions for commands that could cause data loss or security issues
-- MUST test .claude/settings.json changes with fresh Claude sessions
-
-**Security Review Process:**
-- MUST verify all allowed commands are truly read-only or safe
-- MUST ensure no user-specific paths or credentials are included
-- MUST test that malicious arguments cannot cause harm via allowed commands
-- SHOULD periodically audit permission list for security implications
-- MUST validate hook commands cannot be exploited or cause system damage
-
-## Claude Code Hooks Integration
-
-For Claude Code hook development and architecture:
-
-- **🏗️ Architecture**: See `claude_hooks/AGENTS.md` for development rules
-- **🔧 Status**: Use `./dotfiles.sh status` to check hook build status
-
-**Quick Reference:**
-- Build hooks: `./claude_hooks/build-hooks.sh`
-- Hook config: `.claude/settings.json` (already configured)
-- Hook output: Visible in Claude Code transcript (Ctrl+R)
+- **README.md** - User documentation
+- **ARCHITECTURE.md** - Design principles
+- **docs/README.md** - How to use docs/
+- **docs/development/adding-features.md** - Feature integration (START HERE for new features)
+- **docs/reference/quick-start.md** - Quick start guide
+- **.claude/agents/README.md** - Sub-agent documentation
 
 This project prioritizes security, performance, and maintainability in a bash/macOS environment using GNU Stow for configuration management.

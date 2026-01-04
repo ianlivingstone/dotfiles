@@ -1,10 +1,16 @@
 # Claude Code Agents Directory
 
-This directory contains specialized subagents for this project.
+This directory contains **generic, reusable agents** that are part of the global harness.
 
-## Available Agents
+**IMPORTANT DISTINCTION**:
+- **`claude-code/agents/`** = Generic agents (part of global harness, could be used in any repo)
+- **`.claude/agents/`** = Repository-specific agents (only for THIS dotfiles repository)
 
-### harness-architect
+## Available Generic Agents
+
+Currently, this directory only contains:
+
+### harness-architect (GENERIC)
 **Purpose**: Expert in agent harness design and Claude Code configuration.
 
 **Use When**:

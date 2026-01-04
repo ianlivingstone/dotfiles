@@ -5,6 +5,6 @@
       "Bash:git commit*-n*"
     ]
   },
-  "alwaysThinkingEnabled": false,
+  "alwaysThinkingEnabled": true,
   "autoUpdate": false
 }

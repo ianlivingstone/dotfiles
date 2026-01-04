@@ -16,15 +16,48 @@
       "Bash:git status*",
       "Bash:git log*",
       "Bash:git diff*",
-      "Bash:git add*",
+      "Bash:git show*",
+      "Bash:git branch*",
+      "Bash:git remote*",
       "Bash:~/.claude/commands/*",
-      "Bash:COMMIT_FILE=*",
-      "Bash:echo*",
-      "Bash:wc -l*"
+      "Bash:./dotfiles.sh status*",
+      "Bash:./dotfiles.sh help*",
+      "Bash:./claude_hooks/build-hooks.sh*",
+      "Bash:shellcheck*",
+      "Bash:gpg --list-keys*",
+      "Bash:gpg --list-secret-keys*",
+      "Bash:cat*",
+      "Bash:ls*",
+      "Bash:pwd*",
+      "Bash:cd*",
+      "Bash:head*",
+      "Bash:tail*",
+      "Bash:grep*",
+      "Bash:find*",
+      "Bash:wc*",
+      "Bash:sort*",
+      "Bash:uniq*",
+      "Bash:awk*",
+      "Bash:sed*",
+      "Bash:which*",
+      "Bash:command -v*",
+      "Bash:stat*",
+      "Bash:file*",
+      "Bash:tree*"
     ],
     "deny": [
       "Bash:git commit*--no-gpg-sign*",
-      "Bash:git commit*-n*"
+      "Bash:git commit*-n*",
+      "Bash:git push*--force*",
+      "Bash:git push*-f*",
+      "Bash:rm -rf*",
+      "Bash:rm -fr*",
+      "Bash:sudo*",
+      "Bash:chmod 777*",
+      "Bash:chmod -R 777*",
+      "Bash:eval*",
+      "Bash:curl http:*",
+      "Bash:wget http:*"
     ]
   },
   "hooks": {
@@ -34,8 +67,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude_hooks/bin/whitespace-cleaner",
+            "command": "{ echo \"[$(date '+%Y-%m-%d %H:%M:%S')] whitespace-cleaner\"; echo \"  File: $FILE_PATH\"; claude_hooks/bin/whitespace-cleaner 2>&1 | sed 's/^/  /'; echo \"\"; } | tee -a ~/.claude/hook-output.log | tail -4",
             "description": "Process file writes and remove trailing whitespace"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit.*\\.sh$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ echo \"[$(date '+%Y-%m-%d %H:%M:%S')] shellcheck\"; echo \"  File: $FILE_PATH\"; if command -v shellcheck >/dev/null; then shellcheck -x \"$FILE_PATH\" 2>&1 | head -20 | sed 's/^/  /'; else echo '  ⚠️  shellcheck not available'; fi; echo \"\"; } | tee -a ~/.claude/hook-output.log | tail -10",
+            "description": "Lint shell scripts with shellcheck"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit.*AGENTS\\.md$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ echo \"[$(date '+%Y-%m-%d %H:%M:%S')] validate-agent-rules\"; echo \"  File: $FILE_PATH\"; if [ -f .claude/commands/validate-agent-rules.sh ]; then .claude/commands/validate-agent-rules.sh \"$FILE_PATH\" 2>&1 | sed 's/^/  /'; else echo '  ⚠️  Agent Rules validator not available'; fi; echo \"\"; } | tee -a ~/.claude/hook-output.log | tail -10",
+            "description": "Validate Agent Rules compliance"
           }
         ]
       }
