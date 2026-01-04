@@ -176,6 +176,29 @@ For more on documentation strategy: `docs/architecture/documentation-strategy.md
 
 ## Quick Start for Common Tasks
 
+**Commit changes:**
+1. Stage changes: `git add <files>` (USER does this, not Claude)
+2. Verify: `git status`
+3. Commit with single command (5s timeout):
+```bash
+git commit -S -m "$(cat <<'EOF'
+<verb> <what changed>
+
+<why - optional>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+**Commit rules:**
+- Use imperative mood: "Add feature" not "Added feature"
+- Subject: 50-72 chars max
+- Be specific: "Add gopls config" not "Update files"
+- Full guide: `claude-code/commands/commit.md`
+
 **Add new package:**
 1. Create package directory: `mkdir mypackage`
 2. Mirror target structure: `mypackage/.config/mypackage/config.yml`

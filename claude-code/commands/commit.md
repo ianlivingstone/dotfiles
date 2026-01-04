@@ -4,48 +4,117 @@ description: Generate commit message and commit staged changes
 
 # Commit Workflow
 
-Create commits with AI-generated messages and intelligent GPG handling.
+Create commits with AI-generated messages following best practices.
+
+## Execution Rules
+
+**CRITICAL - READ FIRST:**
+- ✅ Timeout: 5000ms (5 seconds) maximum
+- ✅ Run in FOREGROUND (script handles GPG intelligently)
+- ✅ Single git commit command (no multi-step workflow)
+- ❌ NEVER run `git add` (user stages changes)
+
+## Commit Message Template
+
+```
+<imperative verb> <what changed> [scope]
+
+[Optional: 1-2 sentence explanation of WHY this change was made]
+[Optional: Key technical details if not obvious from diff]
+
+[Optional: Breaking changes, migration notes, or related issues]
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+```
+
+## Commit Message Ground Rules
+
+**Subject Line (First Line):**
+- ✅ Max 50-72 characters
+- ✅ Imperative mood: "Add feature" not "Added feature" or "Adds feature"
+- ✅ Start with verb: Add, Fix, Update, Remove, Refactor, Document, etc.
+- ✅ Be specific: "Add gopls config" not "Update files"
+- ✅ No period at end
+- ❌ NEVER use vague words: "changes", "updates", "improvements", "fixes"
+
+**Body (Optional):**
+- ✅ Explain WHY, not what (diff shows what)
+- ✅ Wrap at 72 characters
+- ✅ Blank line after subject
+- ✅ Use bullet points for multiple items
+- ❌ NEVER describe HOW (code shows how)
+
+**Examples of GOOD commits:**
+```
+Add validation hooks for shell scripts and Agent Rules
+
+Configure shellcheck to run on .sh file writes and validate
+AGENTS.md files against Agent Rules specification automatically.
+Logs to ~/.claude/hook-output.log for debugging.
+```
+
+```
+Fix command injection in dotfiles.sh package parsing
+
+Replace && with explicit if statement to prevent set -e from
+causing installation failures when parsing packages.config.
+```
+
+```
+Remove deprecated tmux mouse-mode options
+
+Options removed in tmux 2.1+. Modern mouse option covers all cases.
+```
+
+**Examples of BAD commits:**
+```
+Update files                    ❌ Too vague
+Updated the configuration      ❌ Wrong tense
+feat: add new feature          ❌ Redundant prefix (unless repo uses conventional commits)
+Fixed bug in code              ❌ Not specific
+Changes to improve things      ❌ Meaningless filler
+```
 
 ## Workflow
 
-**IMPORTANT: The user stages changes, not Claude!**
-
-Claude should NEVER run `git add` commands. The user is responsible for staging their changes.
-
-1. **Check for staged changes** - verify the user has staged files with `git status`
-
-2. **Discover validation approach** for this repository:
-   - Check for repository-specific slash commands (e.g., /validate, /test)
-   - Read README.md or CONTRIBUTING.md for validation instructions
-   - Check for pre-commit hooks (.git/hooks/pre-commit)
-   - Look at CI workflows (.github/workflows/*) to understand what checks run
-
-3. **Run appropriate validation** based on what you discover
-
-4. **Draft the commit message** following conventional commit style and repository patterns
-
-5. **Show the commit message to the user and ask for confirmation**:
-   - Display the full commit message you've drafted
-   - Ask: "Ready to commit with this message? (yes/no/edit)"
-   - If "yes": proceed with commit
-   - If "no": abort and ask what changes are needed
-   - If "edit": ask what modifications to make to the message
-
-6. **Only after user confirms**, proceed with commit:
-
+**Step 1: Verify staged changes**
 ```bash
-# Generate unique filename to avoid race conditions
-COMMIT_FILE=$(~/.claude/commands/commit.sh generate-filename)
+git status
+```
+If nothing staged, STOP and ask user to stage changes.
 
-# Write the commit message to the file
-cat > "$COMMIT_FILE" <<'EOF'
-Your commit message here
+**Step 2: Draft commit message**
+- Follow template above
+- Match repository style (check recent commits)
+- Focus on WHAT and WHY
+- Be concise but informative
+
+**Step 3: Show message and get approval**
+Display full message and ask:
+> "Ready to commit with this message? (yes/no/edit)"
+
+- If "yes" → proceed to Step 4
+- If "no" → abort
+- If "edit" → ask for changes and revise
+
+**Step 4: Commit in single command**
+```bash
+git commit -S -m "$(cat <<'EOF'
+<subject line>
+
+<optional body>
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 EOF
-
-# Commit using the file
-~/.claude/commands/commit.sh commit "$COMMIT_FILE"
+)"
 ```
+
+**IMPORTANT:**
+- Single bash invocation (no temp files)
+- Heredoc preserves formatting
+- Script handles GPG intelligently
+- Max 5s timeout

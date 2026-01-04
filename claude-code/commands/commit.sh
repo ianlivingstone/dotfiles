@@ -160,17 +160,30 @@ validate_commit_state() {
     return 0
 }
 
-# Function to get recent commit messages for style analysis
+# Function to get all commit context in one call (optimized)
+get_commit_context() {
+    # Single git invocation to get everything needed
+    cat <<EOF
+━━━ Recent Commit Style ━━━
+$(git log -5 --pretty=format:"%s" --no-merges)
+
+━━━ Staged Changes ━━━
+$(git diff --cached --stat)
+
+━━━ Detailed Diff ━━━
+$(git diff --cached | head -100)
+EOF
+}
+
+# Legacy functions for backward compatibility (now just call combined version)
 get_recent_commits() {
-    git log -10 --pretty=format:"%s" --no-merges
+    git log -5 --pretty=format:"%s" --no-merges
 }
 
-# Function to get staged diff
 get_staged_diff() {
-    git diff --cached
+    git diff --cached | head -100
 }
 
-# Function to get staged diff stats
 get_staged_stats() {
     git diff --cached --stat
 }
@@ -213,59 +226,52 @@ create_commit() {
 
     # Check if GPG signing is required
     if is_gpg_signing_required; then
-        echo -e "${CYAN}🔐 GPG signing is required for commits${NC}"
+        echo -e "${CYAN}🔐 GPG signing required${NC}"
 
         # Check if GPG agent is working
         if ! is_gpg_agent_working; then
-            echo -e "${RED}❌ GPG agent is not properly configured${NC}"
-            echo ""
-            if [[ "$cleanup_temp" == "false" ]]; then
-                echo -e "${CYAN}Commit message in: $temp_file${NC}"
-                echo -e "${YELLOW}To complete the commit, run:${NC}"
-                echo -e "${BLUE}git commit -F \"$temp_file\"${NC}"
-            else
-                echo -e "${YELLOW}To complete the commit, unlock GPG and try again${NC}"
-            fi
-            echo ""
-            echo -e "${CYAN}💡 Troubleshooting GPG:${NC}"
-            echo "  • Check GPG agent: gpg-connect-agent /bye"
-            echo "  • Verify signing key: git config user.signingkey"
-            echo "  • List secret keys: gpg --list-secret-keys"
-            echo "  • Start GPG agent: gpgconf --launch gpg-agent"
+            echo -e "${RED}❌ GPG agent not configured${NC}"
+            echo -e "${YELLOW}Fix: gpgconf --launch gpg-agent${NC}"
             return 1
         fi
 
-        echo -e "${GREEN}✅ GPG agent is running and key is available${NC}"
+        # Smart GPG detection: only fail if non-interactive AND passphrase not cached
+        local is_interactive=false
+        if [[ -t 0 ]] && [[ -t 1 ]]; then
+            is_interactive=true
+        fi
 
         # Test if passphrase is cached
-        echo -e "${BLUE}Testing GPG key passphrase...${NC}"
-        if ! test_gpg_signing; then
+        local passphrase_cached=false
+        if test_gpg_signing; then
+            passphrase_cached=true
+        fi
+
+        # Decision logic
+        if [[ "$is_interactive" == "true" ]]; then
+            # Interactive: allow GPG to prompt for passphrase
+            echo -e "${GREEN}✅ Interactive mode - GPG can prompt for passphrase${NC}"
+        elif [[ "$passphrase_cached" == "true" ]]; then
+            # Non-interactive but passphrase cached: safe to proceed
+            echo -e "${GREEN}✅ Passphrase cached - can commit without prompts${NC}"
+        else
+            # Non-interactive and passphrase NOT cached: will hang, fail now
             local signing_key=$(git config --get user.signingkey 2>/dev/null)
-            echo -e "${YELLOW}⚠️  GPG key passphrase is not cached${NC}"
+            echo -e "${RED}❌ Cannot commit: non-interactive mode and passphrase not cached${NC}"
             echo ""
             if [[ "$cleanup_temp" == "false" ]]; then
-                echo -e "${CYAN}Commit message in: $temp_file${NC}"
-                echo -e "${YELLOW}Unlock your GPG key, then run:${NC}"
-                echo -e "${BLUE}git commit -F \"$temp_file\"${NC}"
-            else
-                echo -e "${YELLOW}Unlock your GPG key and try again${NC}"
+                echo -e "${CYAN}Commit message saved: $temp_file${NC}"
+                echo -e "${YELLOW}Run manually:${NC} ${BLUE}git commit -F \"$temp_file\"${NC}"
             fi
             echo ""
-            echo -e "${CYAN}💡 To cache your passphrase, run:${NC}"
+            echo -e "${CYAN}💡 To cache passphrase:${NC}"
             echo -e "${BLUE}echo \"test\" | gpg --sign --local-user $signing_key --armor -o /dev/null${NC}"
-            echo ""
-            echo "This will prompt for your passphrase and cache it for future operations."
             return 1
         fi
 
-        echo -e "${GREEN}✅ GPG key passphrase is cached${NC}"
-        echo -e "${BLUE}Attempting to commit...${NC}"
-        echo ""
-
+        # Proceed with commit
         if git commit -F "$temp_file"; then
-            echo ""
-            echo -e "${GREEN}✅ Commit created successfully${NC}"
-            echo ""
+            echo -e "${GREEN}✅ Commit created${NC}"
             git log -1 --pretty=format:"%C(yellow)%h%Creset %s"
             echo ""
             return 0
@@ -288,16 +294,11 @@ create_commit() {
     fi
 }
 
-# Function to display commit context for AI
+# Function to display commit context for AI (optimized)
 display_commit_context() {
-    echo -e "${BLUE}━━━ Recent Commit Style ━━━${NC}"
-    get_recent_commits
-    echo ""
-    echo -e "${BLUE}━━━ Staged Changes Stats ━━━${NC}"
-    get_staged_stats
-    echo ""
-    echo -e "${BLUE}━━━ Staged Changes Diff ━━━${NC}"
-    get_staged_diff
+    echo -e "${BLUE}"
+    get_commit_context
+    echo -e "${NC}"
 }
 
 # Function to generate unique commit message filename
@@ -307,9 +308,9 @@ generate_commit_filename() {
     echo "/tmp/commit-msg-${random_id}.txt"
 }
 
-# Main workflow
+# Main workflow (simplified)
 main() {
-    echo -e "${GREEN}🤖 AI Commit Generator${NC}"
+    echo -e "${GREEN}🤖 Commit Context${NC}"
     echo ""
 
     # Validate state
@@ -318,34 +319,16 @@ main() {
     fi
 
     echo ""
-    echo -e "${BLUE}📊 Gathering context for commit message...${NC}"
-    echo ""
-
-    # Display all context
+    # Display all context in one go
     display_commit_context
 
     echo ""
-    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}✍️  Commit Message Guidelines:${NC}"
-    echo "  • First line: concise summary (50-72 chars max)"
-    echo "  • Use imperative mood: 'Add feature' not 'Added feature'"
-    echo "  • Match repository style (use feat:/fix: if others do)"
-    echo "  • Be specific: 'Add gopls config' not 'Update files'"
-    echo "  • Focus on WHAT and WHY, not HOW"
+    echo -e "${CYAN}📝 Commit Guidelines:${NC}"
+    echo "• Subject: <verb> <what> (50-72 chars, imperative mood)"
+    echo "• Body: WHY, not what (optional)"
+    echo "• Footer: Claude Code attribution (required)"
     echo ""
-    echo "  MUST include footer:"
-    echo "    🤖 Generated with [Claude Code](https://claude.com/claude-code)"
-    echo ""
-    echo "    Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
-    echo ""
-    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
-    echo -e "${CYAN}💡 Next steps:${NC}"
-    echo "  1. Write commit message to: ${BLUE}$(generate_commit_filename)${NC}"
-    echo "  2. Run: ${BLUE}~/.claude/commands/commit.sh commit <filename>${NC}"
-    echo ""
-    echo -e "${CYAN}Or generate a unique filename:${NC}"
-    echo "  ${BLUE}~/.claude/commands/commit.sh generate-filename${NC}"
+    echo -e "${CYAN}💡 Use: git commit -S -m \"\$(cat <<'EOF' ... EOF)\"${NC}"
 }
 
 # Main command dispatcher
