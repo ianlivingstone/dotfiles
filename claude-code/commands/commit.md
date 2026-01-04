@@ -13,6 +13,7 @@ Create commits with AI-generated messages following best practices.
 - ✅ Run in FOREGROUND (script handles GPG intelligently)
 - ✅ Single git commit command (no multi-step workflow)
 - ❌ NEVER run `git add` (user stages changes)
+- ❌ NEVER commit without showing message and getting user approval first
 
 ## Commit Message Template
 
@@ -91,15 +92,21 @@ If nothing staged, STOP and ask user to stage changes.
 - Focus on WHAT and WHY
 - Be concise but informative
 
-**Step 3: Show message and get approval**
-Display full message and ask:
+**Step 3: Show message and get user approval (REQUIRED)**
+
+**⚠️  CRITICAL: ALWAYS show the full commit message to the user and wait for approval before running git commit.**
+
+Display the complete commit message in a code block, then ask:
 > "Ready to commit with this message? (yes/no/edit)"
 
-- If "yes" → proceed to Step 4
-- If "no" → abort
-- If "edit" → ask for changes and revise
+**Response handling:**
+- **"yes"** → Proceed to Step 4
+- **"no"** → Abort, ask what should change
+- **"edit"** → Ask for specific changes, revise message, show again for approval
 
-**Step 4: Commit in single command**
+**NEVER skip this step. User must explicitly approve the message.**
+
+**Step 4: Commit in single command (only after approval)**
 ```bash
 git commit -S -m "$(cat <<'EOF'
 <subject line>
