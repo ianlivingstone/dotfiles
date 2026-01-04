@@ -309,17 +309,29 @@ detect_ssh_keys() {
     local ssh_config="$xdg_config/ssh/machine.config"
     local cached_keys=()
     local cached_selection=""
+    local key_path
 
-    if [[ -f "$ssh_config" ]]; then
+    if [[ -f "$ssh_config" ]] && [[ -s "$ssh_config" ]]; then
         # Parse existing keys from machine.config
-        while IFS= read -r line; do
+        # Temporarily disable nounset for regex matching
+        set +u
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            # Skip empty lines and comments
+            if [[ -z "$line" ]] || [[ "$line" =~ ^[[:space:]]*# ]]; then
+                continue
+            fi
+
             if [[ "$line" =~ IdentityFile[[:space:]]+(.*) ]]; then
-                local key_path="${BASH_REMATCH[1]}"
-                key_path="${key_path/#\~/$HOME}"
-                key_path="${key_path//\$HOME/$HOME}"
-                cached_keys+=("$key_path")
+                # Capture BASH_REMATCH immediately
+                local matched_path="${BASH_REMATCH[1]}"
+                # Expand HOME references
+                matched_path="${matched_path/#\~/$HOME}"
+                matched_path="${matched_path//\$HOME/$HOME}"
+                cached_keys+=("$matched_path")
             fi
         done < "$ssh_config"
+        # Re-enable nounset
+        set -u
 
         # Build cached selection string for display
         if [[ ${#cached_keys[@]} -eq ${#ssh_keys[@]} ]]; then
@@ -353,15 +365,22 @@ detect_ssh_keys() {
     echo "  - Enter numbers comma-separated (e.g., 1,3)"
     echo "  - Enter 'all' for all keys"
     echo "  - Enter 'none' to skip SSH key setup"
-    if [[ -n "$cached_selection" ]]; then
-        printf "Selection [%s]: " "$cached_selection"
-    else
-        printf "Selection: "
-    fi
+
     local selection=""
-    read -r selection < /dev/tty
-    # Use cached value if Enter pressed
-    selection="${selection:-$cached_selection}"
+    # If not in a terminal (non-interactive) and we have cached selection, use it
+    if ! tty -s && [[ -n "$cached_selection" ]]; then
+        echo -e "${BLUE}📋 Using existing SSH key selection (non-interactive mode): $cached_selection${NC}"
+        selection="$cached_selection"
+    else
+        if [[ -n "$cached_selection" ]]; then
+            printf "Selection [%s]: " "$cached_selection"
+        else
+            printf "Selection: "
+        fi
+        read -r selection < /dev/tty
+        # Use cached value if Enter pressed
+        selection="${selection:-$cached_selection}"
+    fi
     
     local selected_keys=()
     if [[ "$selection" == "all" ]]; then
@@ -399,28 +418,35 @@ configure_git_user() {
     local git_name=""
     local git_email=""
 
-    # Check if git user is already configured globally (for reinstall)
-    local existing_name=$(git config --global user.name 2>/dev/null || echo "")
-    local existing_email=$(git config --global user.email 2>/dev/null || echo "")
+    # Check if git user is already configured (including machine.config via include)
+    local existing_name=$(git config user.name 2>/dev/null || echo "")
+    local existing_email=$(git config user.email 2>/dev/null || echo "")
 
     # Prompt with defaults - allow Enter to accept cached values
-    if [[ -n "$existing_name" ]]; then
-        printf "Enter your full name for Git commits [%s]: " "$existing_name"
+    # If not in a terminal (non-interactive) and we have existing config, use it
+    if ! tty -s && [[ -n "$existing_name" ]] && [[ -n "$existing_email" ]]; then
+        echo -e "${BLUE}📋 Using existing Git configuration (non-interactive mode)${NC}"
+        git_name="$existing_name"
+        git_email="$existing_email"
     else
-        printf "Enter your full name for Git commits: "
-    fi
-    read -r git_name < /dev/tty
-    # Use existing value if Enter pressed
-    git_name="${git_name:-$existing_name}"
+        if [[ -n "$existing_name" ]]; then
+            printf "Enter your full name for Git commits [%s]: " "$existing_name"
+        else
+            printf "Enter your full name for Git commits: "
+        fi
+        read -r git_name < /dev/tty
+        # Use existing value if Enter pressed
+        git_name="${git_name:-$existing_name}"
 
-    if [[ -n "$existing_email" ]]; then
-        printf "Enter your email address for Git commits [%s]: " "$existing_email"
-    else
-        printf "Enter your email address for Git commits: "
+        if [[ -n "$existing_email" ]]; then
+            printf "Enter your email address for Git commits [%s]: " "$existing_email"
+        else
+            printf "Enter your email address for Git commits: "
+        fi
+        read -r git_email < /dev/tty
+        # Use existing value if Enter pressed
+        git_email="${git_email:-$existing_email}"
     fi
-    read -r git_email < /dev/tty
-    # Use existing value if Enter pressed
-    git_email="${git_email:-$existing_email}"
 
     if [[ -z "${git_name:-}" || -z "${git_email:-}" ]]; then
         echo -e "${YELLOW}⚠️  Name and email are required for Git${NC}"
@@ -456,10 +482,10 @@ detect_gpg_keys() {
         return 1
     fi
 
-    # Check for existing GPG key in machine.config
+    # Check for existing GPG key (including machine.config via include)
     local cached_key=""
     local cached_selection=""
-    local existing_key=$(git config --global user.signingkey 2>/dev/null || echo "")
+    local existing_key=$(git config user.signingkey 2>/dev/null || echo "")
 
     if [[ -n "$existing_key" ]]; then
         # Find index of cached key
@@ -484,15 +510,22 @@ detect_gpg_keys() {
 
     echo ""
     echo "Select a key for Git commit signing (or 'none' to skip):"
-    if [[ -n "$cached_selection" ]]; then
-        printf "Selection (number or 'none') [%s]: " "$cached_selection"
-    else
-        printf "Selection (number or 'none'): "
-    fi
+
     local selection=""
-    read -r selection < /dev/tty
-    # Use cached value if Enter pressed
-    selection="${selection:-$cached_selection}"
+    # If not in a terminal (non-interactive) and we have cached selection, use it
+    if ! tty -s && [[ -n "$cached_selection" ]]; then
+        echo -e "${BLUE}📋 Using existing GPG key selection (non-interactive mode): $cached_selection${NC}"
+        selection="$cached_selection"
+    else
+        if [[ -n "$cached_selection" ]]; then
+            printf "Selection (number or 'none') [%s]: " "$cached_selection"
+        else
+            printf "Selection (number or 'none'): "
+        fi
+        read -r selection < /dev/tty
+        # Use cached value if Enter pressed
+        selection="${selection:-$cached_selection}"
+    fi
     
     if [[ "$selection" == "none" ]]; then
         return 1
@@ -676,11 +709,17 @@ configure_hostname() {
     
     local current_hostname=$(hostname -s)
     echo -e "${YELLOW}Current hostname: $current_hostname${NC}"
-    
-    printf "Enter new hostname (or press Enter to keep current): "
+
     local new_hostname=""
+    # If not in a terminal (non-interactive), keep current hostname
+    if ! tty -s; then
+        echo -e "${BLUE}📋 Keeping current hostname (non-interactive mode): $current_hostname${NC}"
+        return 0
+    fi
+
+    printf "Enter new hostname (or press Enter to keep current): "
     read -r new_hostname < /dev/tty
-    
+
     if [[ -z "${new_hostname:-}" ]]; then
         echo -e "${YELLOW}⚠️  Keeping current hostname: $current_hostname${NC}"
         return 0
