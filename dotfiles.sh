@@ -288,7 +288,7 @@ check_dependencies() {
 
 detect_ssh_keys() {
     echo -e "${BLUE}🔍 Scanning for SSH keys...${NC}"
-    
+
     local ssh_keys=()
     for key in ~/.ssh/id_*; do
         # Check if file exists and is not a .pub file
@@ -296,29 +296,72 @@ detect_ssh_keys() {
             ssh_keys+=("$key")
         fi
     done
-    
+
     if [ ${#ssh_keys[@]} -eq 0 ]; then
         echo -e "${YELLOW}⚠️  No SSH private keys found in ~/.ssh/${NC}"
         echo -e "${BLUE}💡 Generate keys with: ssh-keygen -t ed25519 -C 'your_email@example.com'${NC}"
         echo ""
         return 1
     fi
-    
+
+    # Check for existing SSH key selections in machine.config
+    local xdg_config="$(get_xdg_config_dir)"
+    local ssh_config="$xdg_config/ssh/machine.config"
+    local cached_keys=()
+    local cached_selection=""
+
+    if [[ -f "$ssh_config" ]]; then
+        # Parse existing keys from machine.config
+        while IFS= read -r line; do
+            if [[ "$line" =~ IdentityFile[[:space:]]+(.*) ]]; then
+                local key_path="${BASH_REMATCH[1]}"
+                key_path="${key_path/#\~/$HOME}"
+                key_path="${key_path//\$HOME/$HOME}"
+                cached_keys+=("$key_path")
+            fi
+        done < "$ssh_config"
+
+        # Build cached selection string for display
+        if [[ ${#cached_keys[@]} -eq ${#ssh_keys[@]} ]]; then
+            cached_selection="all"
+        elif [[ ${#cached_keys[@]} -gt 0 ]]; then
+            # Find indices of cached keys
+            local indices=()
+            for cached in "${cached_keys[@]}"; do
+                local idx=1
+                for key in "${ssh_keys[@]}"; do
+                    if [[ "$key" == "$cached" ]]; then
+                        indices+=("$idx")
+                        break
+                    fi
+                    ((idx++))
+                done
+            done
+            cached_selection=$(IFS=,; echo "${indices[*]}")
+        fi
+    fi
+
     echo -e "${GREEN}Found SSH keys:${NC}"
     local i=1
     for key in "${ssh_keys[@]}"; do
         echo -e "  ${GREEN}$i.${NC} $key"
         ((i++))
     done
-    
+
     echo ""
     echo "Select keys to auto-load on shell startup:"
     echo "  - Enter numbers comma-separated (e.g., 1,3)"
     echo "  - Enter 'all' for all keys"
     echo "  - Enter 'none' to skip SSH key setup"
-    printf "Selection: "
+    if [[ -n "$cached_selection" ]]; then
+        printf "Selection [%s]: " "$cached_selection"
+    else
+        printf "Selection: "
+    fi
     local selection=""
     read -r selection < /dev/tty
+    # Use cached value if Enter pressed
+    selection="${selection:-$cached_selection}"
     
     local selected_keys=()
     if [[ "$selection" == "all" ]]; then
@@ -360,50 +403,77 @@ configure_git_user() {
     local existing_name=$(git config --global user.name 2>/dev/null || echo "")
     local existing_email=$(git config --global user.email 2>/dev/null || echo "")
 
-    if [[ -n "$existing_name" && -n "$existing_email" ]]; then
-        echo -e "${GREEN}✅ Using existing Git config: $existing_name <$existing_email>${NC}"
-        GIT_USER_NAME="$existing_name"
-        GIT_USER_EMAIL="$existing_email"
-        return 0
+    # Prompt with defaults - allow Enter to accept cached values
+    if [[ -n "$existing_name" ]]; then
+        printf "Enter your full name for Git commits [%s]: " "$existing_name"
+    else
+        printf "Enter your full name for Git commits: "
     fi
-
-    # Use printf instead of -p flag for better compatibility with strict mode
-    # Read from /dev/tty to ensure we get user input
-    printf "Enter your full name for Git commits: "
     read -r git_name < /dev/tty
-    printf "Enter your email address for Git commits: "
+    # Use existing value if Enter pressed
+    git_name="${git_name:-$existing_name}"
+
+    if [[ -n "$existing_email" ]]; then
+        printf "Enter your email address for Git commits [%s]: " "$existing_email"
+    else
+        printf "Enter your email address for Git commits: "
+    fi
     read -r git_email < /dev/tty
-    
+    # Use existing value if Enter pressed
+    git_email="${git_email:-$existing_email}"
+
     if [[ -z "${git_name:-}" || -z "${git_email:-}" ]]; then
         echo -e "${YELLOW}⚠️  Name and email are required for Git${NC}"
         return 1
     fi
-    
+
     GIT_USER_NAME="$git_name"
     GIT_USER_EMAIL="$git_email"
-    
-    echo -e "${GREEN}✅ Git user configured: $git_name <$git_email>${NC}"
+
+    if [[ "$git_name" == "$existing_name" && "$git_email" == "$existing_email" ]]; then
+        echo -e "${GREEN}✅ Keeping existing Git config: $git_name <$git_email>${NC}"
+    else
+        echo -e "${GREEN}✅ Git user configured: $git_name <$git_email>${NC}"
+    fi
     return 0
 }
 
 detect_gpg_keys() {
     echo -e "${BLUE}🔍 Scanning for GPG keys...${NC}"
-    
+
     # Check if gpg is available
     if ! command -v gpg &> /dev/null; then
         echo -e "${YELLOW}⚠️  GPG not found, skipping GPG key setup${NC}"
         return 1
     fi
-    
+
     local gpg_keys=($(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep '^sec' | awk '{print $2}' | cut -d'/' -f2))
-    
+
     if [ ${#gpg_keys[@]} -eq 0 ]; then
         echo -e "${YELLOW}⚠️  No GPG private keys found${NC}"
         echo -e "${BLUE}💡 Generate with: gpg --full-generate-key${NC}"
         echo ""
         return 1
     fi
-    
+
+    # Check for existing GPG key in machine.config
+    local cached_key=""
+    local cached_selection=""
+    local existing_key=$(git config --global user.signingkey 2>/dev/null || echo "")
+
+    if [[ -n "$existing_key" ]]; then
+        # Find index of cached key
+        local idx=1
+        for key in "${gpg_keys[@]}"; do
+            if [[ "$key" == "$existing_key" ]]; then
+                cached_key="$existing_key"
+                cached_selection="$idx"
+                break
+            fi
+            ((idx++))
+        done
+    fi
+
     echo -e "${GREEN}Found GPG keys:${NC}"
     local i=1
     for key in "${gpg_keys[@]}"; do
@@ -411,12 +481,18 @@ detect_gpg_keys() {
         echo -e "  ${GREEN}$i.${NC} $key - $key_info"
         ((i++))
     done
-    
+
     echo ""
     echo "Select a key for Git commit signing (or 'none' to skip):"
-    printf "Selection (number or 'none'): "
+    if [[ -n "$cached_selection" ]]; then
+        printf "Selection (number or 'none') [%s]: " "$cached_selection"
+    else
+        printf "Selection (number or 'none'): "
+    fi
     local selection=""
     read -r selection < /dev/tty
+    # Use cached value if Enter pressed
+    selection="${selection:-$cached_selection}"
     
     if [[ "$selection" == "none" ]]; then
         return 1
