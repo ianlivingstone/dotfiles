@@ -12,8 +12,17 @@ Create commits with AI-generated messages following best practices.
 - ✅ Timeout: 5000ms (5 seconds) maximum
 - ✅ Run in FOREGROUND (script handles GPG intelligently)
 - ✅ Single git commit command (no multi-step workflow)
-- ❌ NEVER run `git add` (user stages changes)
+- ❌ **NEVER, EVER run `git add` in ANY form** (user stages changes)
 - ❌ NEVER commit without showing message and getting user approval first
+
+**Forbidden git add commands (ALL BLOCKED):**
+- ❌ `git add -A`
+- ❌ `git add .`
+- ❌ `git add -u`
+- ❌ `git add <file>`
+- ❌ Any variation of git add
+
+**Why:** User must control what gets staged. Claude staging files could accidentally include secrets, credentials, or unwanted changes.
 
 ## Commit Message Template
 

@@ -77,6 +77,7 @@ This is a bash/shell-based dotfiles management system for macOS using GNU Stow.
 
 ### Security
 - **NEVER** commit credentials, API keys, or personal data
+- **NEVER** run `git add` in any form (user stages changes)
 - **ALWAYS** use machine.config in ~/.config/ for personal data
 - **ALWAYS** validate file permissions (600 for keys, 700 for sensitive dirs)
 - **ALWAYS** use secure curl: `curl --proto '=https' --tlsv1.2`

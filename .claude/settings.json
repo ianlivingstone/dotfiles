@@ -46,6 +46,7 @@
       "Bash:tree*"
     ],
     "deny": [
+      "Bash:git add*",
       "Bash:git commit*--no-gpg-sign*",
       "Bash:git commit*-n*",
       "Bash:git push*--force*",
