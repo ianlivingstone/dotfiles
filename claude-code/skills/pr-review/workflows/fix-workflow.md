@@ -61,7 +61,7 @@ gh pr view <pr> --json files
 
 **Filter**: Exclude resolved threads, outdated comments, and bot comments.
 
-## Step 2: Analyze and Prioritize
+## Step 2: Initial Analysis and Prioritization
 
 Categorize by priority with specific criteria:
 
@@ -105,35 +105,95 @@ Examples:
 - "Inconsistent indentation"
 - "Could cache this for minor performance gain"
 
-## Step 3: Confirm Scope with User
+## Step 2.5: Deep Analysis with Extended Thinking
 
-**CRITICAL**: Present plan before making changes:
+**CRITICAL: Use extended thinking to thoroughly analyze all issues before fixing.**
+
+After collecting all feedback from Step 1, engage extended thinking mode to:
+
+### Phase 1: Understand Each Issue Deeply
+- What is the reviewer actually asking for? (surface vs underlying concern)
+- Why did this issue occur? (oversight, misunderstanding, architectural problem)
+- What's the proper fix? (quick patch vs right solution)
+- Are there related issues that should be fixed together?
+
+### Phase 2: Plan Fix Strategy
+For each issue, determine:
+- **Exact changes needed**: Which files, functions, lines
+- **Dependencies**: Does this fix require other changes?
+- **Testing approach**: How to verify the fix works
+- **Risk level**: Could this break something else?
+- **Complexity**: Simple edit vs refactor
+
+### Phase 3: Sequence the Work
+- Order by priority: Critical → High → Medium → Low
+- Consider dependencies: Fix foundation issues before dependent ones
+- Group related changes: Fix similar issues in same file together
+- Plan verification: When to run tests (after each? after group?)
+
+### Phase 4: Prepare User Communication
+- Clear explanation of what each fix does
+- Realistic complexity assessment
+- Any concerns or trade-offs to discuss
+- Alternative approaches if applicable
+
+### Output from Extended Thinking
+
+After extended thinking, you should have a clear understanding of:
+1. ✅ Root cause of each issue
+2. ✅ Proper fix approach (not just quick patch)
+3. ✅ Dependencies between fixes
+4. ✅ Risk assessment for each change
+5. ✅ Testing strategy to verify fixes
+6. ✅ Clear sequencing of work
+
+## Step 3: Create Markdown Action Plan
+
+**Create a markdown checklist that shows all planned fixes.**
+
+Format as a markdown checklist (see review-workflow.md Step 4 for format):
+
+```markdown
+## 📋 Action Plan
+
+### 🔴 Critical Issues
+- [ ] **Fix [issue] in `file.js:line`**
+  - Problem: What's wrong
+  - Fix: Specific solution
+  - Complexity: Simple/Medium/Complex (X min)
+  - Testing: How to verify
+
+[Additional critical items...]
+
+### 🟡 High Priority, 🟢 Medium Priority, ⚪ Low Priority
+[Same format for each priority level]
+
+### ✅ Verification Steps
+- [ ] Run tests, linter, build
+- [ ] Verify CI/CD checks pass
+
+**Total Time Estimate**: ~X minutes
+**High Risk Items**: List or "None"
+**Needs Discussion**: List or "None"
+```
+
+This checklist will be presented to the user for confirmation.
+
+## Step 4: Confirm Scope with User
+
+**CRITICAL**: Present the markdown action plan from Step 3 and get user confirmation:
 
 ```markdown
 ## Fixes Planned
 
-I found X review comments:
+I've analyzed all PR feedback and created a detailed action plan:
 
-### Critical (2)
-1. [File:Line] Security: SQL injection
-   - Fix: Use parameterized queries
-
-### High Priority (3)
-2. [File:Line] Bug: Null pointer exception
-   - Fix: Add null check
-3. [File:Line] Logic error: Wrong calculation
-   - Fix: Correct formula
-
-### Medium (2)
-4. [File:Line] Code style: Inconsistent naming
-   - Fix: Rename for consistency
-5. [File:Line] Documentation: Outdated examples
-   - Fix: Update examples
+[Insert the complete markdown checklist from Step 3 here]
 
 Would you like me to:
-A) Fix all issues (1-5)
-B) Fix only critical/high priority (1-3)
-C) Let me choose specific issues to skip
+A) Fix all issues
+B) Fix only critical/high priority
+C) Let me choose specific items to skip
 D) Review and discuss first (no changes yet)
 ```
 

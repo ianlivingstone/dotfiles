@@ -72,22 +72,43 @@ B) Fix the issues found
 
    See [reference/gh-commands.md](reference/gh-commands.md) for command reference.
 
-3. **Analyze**
+3. **Initial analysis**
    - Identify merge blockers
    - Parse unresolved comments by type and priority
    - Assess PR health metrics (size, age, activity)
 
-4. **Generate report**
+4. **🧠 Deep analysis with extended thinking (CRITICAL)**
+   - Engage extended thinking mode to analyze all data comprehensively
+   - Perform root cause analysis for each issue
+   - Create structured action plan with priorities
+   - Map dependencies and assess risks
+   - Develop verification strategy
+
+   **This step transforms raw data into actionable insights**
+
+5. **📋 Create trackable markdown action plan**
+   - Create a detailed markdown checklist with all issues
+   - Include Problem, Root Cause, Fix, Complexity, Dependencies, Testing for each
+   - Prioritize by severity: Critical → High → Medium → Low
+   - Add verification steps for testing and validation
+   - Include implementation order, risk assessment, time estimates
+   - Format as copyable markdown checklist
+
+   **This ensures progress can be monitored as fixes are made**
+
+6. **Generate comprehensive report**
    - Status overview (READY/BLOCKED/PENDING/DRAFT)
+   - **Complete markdown action plan checklist** (copyable)
    - CI/CD checks breakdown
    - Merge blockers with action items
    - Unresolved comments organized by type
+   - **Deep analysis results with implementation plan**
    - PR health metrics
    - Best practices assessment
-   - Recommended next steps
+   - Recommended next steps with rationale
 
-5. **Suggest next action**
-   - If blockers found, offer to fix them
+7. **Suggest next action**
+   - If blockers found, offer to fix them following the todo list
    - Provide specific commands to run
    - Recommend reviewers to ping
 
@@ -99,6 +120,25 @@ B) Fix the issues found
 ## 🎯 Status Overview
 [READY/BLOCKED/PENDING/DRAFT status]
 
+## 📋 Trackable Action Plan
+
+[Complete markdown checklist with:
+- Critical issues (Problem/Root Cause/Fix/Complexity/Dependencies/Testing)
+- High priority issues
+- Medium priority issues
+- Low priority issues
+- Verification steps
+- Implementation plan with order and rationale
+- Risk assessment
+- Time estimates]
+
+**Summary:**
+- X Critical issues (must fix)
+- Y High priority issues (should fix)
+- Z Medium/Low items (improvements)
+
+Copy this checklist to track your progress.
+
 ## 🚦 CI/CD Checks
 [Passing ✅ / Failing ❌ / Pending ⏳]
 
@@ -108,6 +148,14 @@ B) Fix the issues found
 ## 💬 Discussion Status
 [Unresolved comments by type: review/issue/summary]
 
+## 🔍 Deep Analysis & Action Plan
+[Structured analysis from extended thinking]
+- Critical/High/Medium/Low priority issues
+- Root cause analysis for each issue
+- Fix approach with complexity assessment
+- Implementation plan with dependencies
+- Risk assessment and verification strategy
+
 ## 📊 PR Health Metrics
 [Size, files, age, assessment vs best practices]
 
@@ -115,7 +163,7 @@ B) Fix the issues found
 [Strengths and improvement opportunities]
 
 ## 🎬 Recommended Next Steps
-[Priority-ordered action list]
+[Priority-ordered action list with specific commands and rationale]
 ```
 
 See [examples/review-examples.md](examples/review-examples.md) for full examples.

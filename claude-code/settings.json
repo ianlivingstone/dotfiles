@@ -7,5 +7,8 @@
     ]
   },
   "alwaysThinkingEnabled": true,
-  "autoUpdate": false
+  "autoUpdate": false,
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true
+  }
 }
