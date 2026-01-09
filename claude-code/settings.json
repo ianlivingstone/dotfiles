@@ -1,9 +1,11 @@
 {
   "permissions": {
     "deny": [
-      "Bash:git add*",
-      "Bash:git commit*--no-gpg-sign*",
-      "Bash:git commit*-n*"
+      "Bash(git add:*)",
+      "Bash(git add *:*)",
+      "Bash(git commit*--no-gpg-sign:*)",
+      "Bash(git commit*-n:*)",
+      "Bash(git commit*--no-verify:*)"
     ]
   },
   "alwaysThinkingEnabled": true,
