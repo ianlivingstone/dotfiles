@@ -28,6 +28,7 @@ M.plugins = {
           "html",
           "css",
           "markdown",
+          "typespec",
         },
         highlight = { enable = true },
         indent = { enable = true },

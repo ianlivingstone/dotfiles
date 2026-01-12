@@ -9,7 +9,7 @@ end
 M.plugins = {
   {
     "neovim/nvim-lspconfig",
-    ft = { "typescript", "javascript", "go", "lua", "json" }, -- Load only for these filetypes
+    ft = { "typescript", "javascript", "go", "lua", "json", "typespec" }, -- Load only for these filetypes
     dependencies = {
       "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
@@ -192,6 +192,14 @@ M.plugins = {
             telemetry = { enable = false },
           },
         },
+      })
+
+      -- TypeSpec
+      lspconfig.typespec_ls.setup({
+        capabilities = capabilities,
+        cmd = { "tsp-server", "--stdio" },
+        root_dir = lspconfig.util.root_pattern("tspconfig.yaml", "package.json", ".git"),
+        filetypes = { "typespec" },
       })
 
       -- LSP keymaps
