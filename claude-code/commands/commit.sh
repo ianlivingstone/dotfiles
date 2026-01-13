@@ -405,7 +405,8 @@ $(cat "$temp_context")")
     echo "$commit_msg"
 }
 
-# Interactive AI commit workflow
+# AI commit workflow
+# Automatically detects if running interactively or in automation
 ai_commit() {
     echo -e "${GREEN}🤖 AI-Assisted Commit${NC}"
     echo ""
@@ -430,7 +431,7 @@ ai_commit() {
     echo -e "${CYAN}📝 Generating commit message with Claude...${NC}"
     local commit_msg=$(generate_commit_message_ai)
 
-    # Step 4: Show message and get approval
+    # Step 4: Show message
     echo ""
     echo -e "${GREEN}Generated commit message:${NC}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -438,22 +439,30 @@ ai_commit() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
-    read -p "Commit with this message? (y/n/e=edit): " -n 1 -r
-    echo ""
+    # Detect if running in interactive terminal
+    if [[ -t 0 ]] && [[ -t 1 ]]; then
+        # Interactive mode - prompt for approval
+        read -p "Commit with this message? (y/n/e=edit): " -n 1 -r
+        echo ""
 
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        # Commit with generated message
-        echo "$commit_msg" | create_commit
-    elif [[ $REPLY =~ ^[Ee]$ ]]; then
-        # Open in editor
-        local temp_file=$(mktemp)
-        echo "$commit_msg" > "$temp_file"
-        ${EDITOR:-vim} "$temp_file"
-        create_commit "$temp_file"
-        rm -f "$temp_file"
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            # Commit with generated message
+            echo "$commit_msg" | create_commit
+        elif [[ $REPLY =~ ^[Ee]$ ]]; then
+            # Open in editor
+            local temp_file=$(mktemp)
+            echo "$commit_msg" > "$temp_file"
+            ${EDITOR:-vim} "$temp_file"
+            create_commit "$temp_file"
+            rm -f "$temp_file"
+        else
+            echo -e "${YELLOW}❌ Commit cancelled${NC}"
+            exit 1
+        fi
     else
-        echo -e "${YELLOW}❌ Commit cancelled${NC}"
-        exit 1
+        # Non-interactive mode (automation/Claude Code) - auto-approve
+        echo -e "${CYAN}🤖 Auto-committing (non-interactive mode)...${NC}"
+        echo "$commit_msg" | create_commit
     fi
 }
 
@@ -486,7 +495,8 @@ case "${1:-main}" in
         main
         ;;
     ai)
-        # Interactive AI-assisted commit (calls Claude CLI)
+        # AI-assisted commit (calls Claude CLI)
+        # Auto-detects interactive vs non-interactive mode
         ai_commit
         ;;
     validate)
@@ -515,7 +525,7 @@ case "${1:-main}" in
         ;;
     *)
         echo "Usage: $0 [ai|validate|gpg-status|recent-commits|staged-diff|staged-stats|generate-filename|commit [file]]"
-        echo "  ai: Interactive AI-assisted commit (calls Claude CLI)"
+        echo "  ai: AI-assisted commit (auto-detects interactive vs automated mode)"
         echo "  gpg-status: Check if GPG key is unlocked and ready for signing"
         echo "  commit: Pass message via stdin OR file argument"
         echo "  Example: echo \"message\" | $0 commit"

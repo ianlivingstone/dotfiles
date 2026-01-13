@@ -84,8 +84,8 @@ When the user invokes the /commit skill:
    - Gathers commit context (recent commits, diff, stats)
    - Calls `claude -p` to generate commit message
    - Shows message to user
-   - Prompts for approval (y/n/e)
-   - Creates the commit if approved
+   - Detects non-interactive mode and auto-commits (no prompt when run via Claude Code)
+   - In interactive terminal use, prompts for approval (y/n/e)
 
 3. **If the script fails**, it will provide clear instructions to the user:
    - GPG key locked: Instructions to unlock
