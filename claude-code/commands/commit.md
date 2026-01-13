@@ -82,7 +82,7 @@ When the user invokes the /commit skill:
    - Checks for staged changes
    - Checks GPG key status (fails fast if locked)
    - Gathers commit context (recent commits, diff, stats)
-   - Calls `claude -q` to generate commit message
+   - Calls `claude -p` to generate commit message
    - Shows message to user
    - Prompts for approval (y/n/e)
    - Creates the commit if approved

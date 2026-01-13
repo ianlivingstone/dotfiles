@@ -355,8 +355,8 @@ generate_commit_message_ai() {
         get_staged_diff
     } > "$temp_context"
 
-    # Call Claude to generate commit message
-    local commit_msg=$(claude -q "Based on this git context, generate a commit message following these rules:
+    # Call Claude to generate commit message using --print mode
+    local commit_msg=$(claude -p "Based on this git context, generate a commit message following these rules:
 
 **Subject Line:**
 - Max 50-72 characters
