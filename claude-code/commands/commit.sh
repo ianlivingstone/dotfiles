@@ -72,6 +72,37 @@ test_gpg_signing() {
     return $?
 }
 
+# Unified GPG status check function
+# Returns 0 if ready to commit, 1 if not (with error messages)
+check_gpg_status() {
+    local quiet="${1:-false}"  # Pass "true" to suppress success messages
+
+    if ! is_gpg_signing_required; then
+        [[ "$quiet" != "true" ]] && echo -e "${GREEN}✅ GPG signing not required${NC}"
+        return 0
+    fi
+
+    if ! is_gpg_agent_working; then
+        echo -e "${RED}❌ GPG agent not configured${NC}"
+        echo -e "${YELLOW}Fix: gpgconf --launch gpg-agent${NC}"
+        return 1
+    fi
+
+    if test_gpg_signing; then
+        [[ "$quiet" != "true" ]] && echo -e "${GREEN}✅ GPG key unlocked and ready${NC}"
+        return 0
+    else
+        local signing_key=$(git config --get user.signingkey 2>/dev/null)
+        echo -e "${RED}❌ GPG key is locked${NC}"
+        echo ""
+        echo -e "${CYAN}💡 To unlock your key, run:${NC}"
+        echo -e "${BLUE}echo \"test\" | gpg --sign --local-user $signing_key --armor -o /dev/null${NC}"
+        echo ""
+        echo -e "${YELLOW}Then enter your passphrase when prompted.${NC}"
+        return 1
+    fi
+}
+
 # Function to check for staged changes
 check_staged_changes() {
     if ! git diff --cached --quiet; then
@@ -308,6 +339,102 @@ generate_commit_filename() {
     echo "/tmp/commit-msg-${random_id}.txt"
 }
 
+# Function to generate commit message using Claude
+generate_commit_message_ai() {
+    local temp_context=$(mktemp)
+
+    # Gather all context
+    {
+        echo "=== Recent Commit Style ==="
+        get_recent_commits
+        echo ""
+        echo "=== Staged Changes Stats ==="
+        get_staged_stats
+        echo ""
+        echo "=== Staged Changes Diff ==="
+        get_staged_diff
+    } > "$temp_context"
+
+    # Call Claude to generate commit message
+    local commit_msg=$(claude -q "Based on this git context, generate a commit message following these rules:
+
+**Subject Line:**
+- Max 50-72 characters
+- Imperative mood: 'Add feature' not 'Added feature'
+- Start with verb: Add, Fix, Update, Remove, Refactor, etc.
+- Be specific: 'Add gopls config' not 'Update files'
+- No period at end
+
+**Body (optional):**
+- Explain WHY, not what (diff shows what)
+- Wrap at 72 characters
+- Blank line after subject
+
+**Footer (required):**
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+
+Match the style of recent commits. Here's the context:
+
+$(cat "$temp_context")")
+
+    rm -f "$temp_context"
+    echo "$commit_msg"
+}
+
+# Interactive AI commit workflow
+ai_commit() {
+    echo -e "${GREEN}🤖 AI-Assisted Commit${NC}"
+    echo ""
+
+    # Step 1: Validate state
+    if ! validate_commit_state; then
+        exit 1
+    fi
+    echo ""
+
+    # Step 2: Check GPG status using unified check
+    if is_gpg_signing_required; then
+        echo -e "${CYAN}🔐 Checking GPG status...${NC}"
+        if ! check_gpg_status "quiet"; then
+            exit 1
+        fi
+        echo -e "${GREEN}✅ GPG ready${NC}"
+        echo ""
+    fi
+
+    # Step 3: Generate commit message with AI
+    echo -e "${CYAN}📝 Generating commit message with Claude...${NC}"
+    local commit_msg=$(generate_commit_message_ai)
+
+    # Step 4: Show message and get approval
+    echo ""
+    echo -e "${GREEN}Generated commit message:${NC}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "$commit_msg"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    read -p "Commit with this message? (y/n/e=edit): " -n 1 -r
+    echo ""
+
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Commit with generated message
+        echo "$commit_msg" | create_commit
+    elif [[ $REPLY =~ ^[Ee]$ ]]; then
+        # Open in editor
+        local temp_file=$(mktemp)
+        echo "$commit_msg" > "$temp_file"
+        ${EDITOR:-vim} "$temp_file"
+        create_commit "$temp_file"
+        rm -f "$temp_file"
+    else
+        echo -e "${YELLOW}❌ Commit cancelled${NC}"
+        exit 1
+    fi
+}
+
 # Main workflow (simplified)
 main() {
     echo -e "${GREEN}🤖 Commit Context${NC}"
@@ -336,8 +463,17 @@ case "${1:-main}" in
     main)
         main
         ;;
+    ai)
+        # Interactive AI-assisted commit (calls Claude CLI)
+        ai_commit
+        ;;
     validate)
         validate_commit_state
+        ;;
+    gpg-status)
+        # Check GPG signing status - returns 0 if ready, 1 if not
+        check_gpg_status
+        exit $?
         ;;
     recent-commits)
         get_recent_commits
@@ -356,7 +492,9 @@ case "${1:-main}" in
         create_commit "${2:-}"
         ;;
     *)
-        echo "Usage: $0 [validate|recent-commits|staged-diff|staged-stats|generate-filename|commit [file]]"
+        echo "Usage: $0 [ai|validate|gpg-status|recent-commits|staged-diff|staged-stats|generate-filename|commit [file]]"
+        echo "  ai: Interactive AI-assisted commit (calls Claude CLI)"
+        echo "  gpg-status: Check if GPG key is unlocked and ready for signing"
         echo "  commit: Pass message via stdin OR file argument"
         echo "  Example: echo \"message\" | $0 commit"
         echo "  Example: $0 commit /path/to/message.txt"

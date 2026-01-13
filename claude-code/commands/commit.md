@@ -9,54 +9,42 @@ Create commits with AI-generated messages following best practices.
 ## Execution Rules
 
 **CRITICAL - READ FIRST:**
-- ✅ Timeout: 5000ms (5 seconds) maximum
-- ✅ Run in FOREGROUND (script handles GPG intelligently)
-- ✅ Single git commit command (no multi-step workflow)
-- ❌ **NEVER, EVER run `git add` in ANY form** (user stages changes)
-- ❌ NEVER commit without showing message and getting user approval first
+- ✅ **ONLY run commit.sh script** - do NOT run any git commands directly
+- ✅ The script handles ALL validation, GPG checking, and commit creation
+- ❌ **NEVER run shell commands directly** - everything goes through commit.sh
+- ❌ **NEVER run `git add` in ANY form** - user stages changes
+- ❌ **NEVER run `git status`, `git commit`, `git diff`** - commit.sh handles this
 
-**Forbidden git add commands (ALL BLOCKED):**
-- ❌ `git add -A`
-- ❌ `git add .`
-- ❌ `git add -u`
-- ❌ `git add <file>`
-- ❌ Any variation of git add
+**Why this approach:**
+- Eliminates GPG timeout issues (script checks key status upfront)
+- Reduces round trips (one script call does everything)
+- Deterministic behavior (script handles all edge cases)
+- User maintains control (interactive approval built into script)
 
-**Why:** User must control what gets staged. Claude staging files could accidentally include secrets, credentials, or unwanted changes.
+## Commit Message Guidelines (for reference only)
 
-## Commit Message Template
+The commit.sh script will call Claude CLI with these guidelines. You don't need to apply them - they're built into the script's prompt.
 
+**Subject Line:**
+- Max 50-72 characters
+- Imperative mood: "Add feature" not "Added feature"
+- Start with verb: Add, Fix, Update, Remove, Refactor, etc.
+- Be specific: "Add gopls config" not "Update files"
+- No period at end
+
+**Body (optional):**
+- Explain WHY, not what (diff shows what)
+- Wrap at 72 characters
+- Blank line after subject
+
+**Footer (required):**
 ```
-<imperative verb> <what changed> [scope]
-
-[Optional: 1-2 sentence explanation of WHY this change was made]
-[Optional: Key technical details if not obvious from diff]
-
-[Optional: Breaking changes, migration notes, or related issues]
-
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ```
 
-## Commit Message Ground Rules
-
-**Subject Line (First Line):**
-- ✅ Max 50-72 characters
-- ✅ Imperative mood: "Add feature" not "Added feature" or "Adds feature"
-- ✅ Start with verb: Add, Fix, Update, Remove, Refactor, Document, etc.
-- ✅ Be specific: "Add gopls config" not "Update files"
-- ✅ No period at end
-- ❌ NEVER use vague words: "changes", "updates", "improvements", "fixes"
-
-**Body (Optional):**
-- ✅ Explain WHY, not what (diff shows what)
-- ✅ Wrap at 72 characters
-- ✅ Blank line after subject
-- ✅ Use bullet points for multiple items
-- ❌ NEVER describe HOW (code shows how)
-
-**Examples of GOOD commits:**
+**Good examples:**
 ```
 Add validation hooks for shell scripts and Agent Rules
 
@@ -72,65 +60,36 @@ Replace && with explicit if statement to prevent set -e from
 causing installation failures when parsing packages.config.
 ```
 
-```
-Remove deprecated tmux mouse-mode options
-
-Options removed in tmux 2.1+. Modern mouse option covers all cases.
-```
-
-**Examples of BAD commits:**
+**Bad examples:**
 ```
 Update files                    ❌ Too vague
 Updated the configuration      ❌ Wrong tense
-feat: add new feature          ❌ Redundant prefix (unless repo uses conventional commits)
 Fixed bug in code              ❌ Not specific
-Changes to improve things      ❌ Meaningless filler
 ```
 
 ## Workflow
 
-**Step 1: Verify staged changes**
-```bash
-git status
-```
-If nothing staged, STOP and ask user to stage changes.
+**IMPORTANT: Do NOT run any commands yourself. Just run commit.sh.**
 
-**Step 2: Draft commit message**
-- Follow template above
-- Match repository style (check recent commits)
-- Focus on WHAT and WHY
-- Be concise but informative
+When the user invokes the /commit skill:
 
-**Step 3: Show message and get user approval (REQUIRED)**
+1. **Run the commit.sh script** (it will handle everything):
+   - Use Bash tool to execute: `./claude-code/commands/commit.sh ai`
+   - That's it. The script does all the work.
 
-**⚠️  CRITICAL: ALWAYS show the full commit message to the user and wait for approval before running git commit.**
+2. **What the script does** (you don't need to do any of this):
+   - Validates git repository
+   - Checks for staged changes
+   - Checks GPG key status (fails fast if locked)
+   - Gathers commit context (recent commits, diff, stats)
+   - Calls `claude -q` to generate commit message
+   - Shows message to user
+   - Prompts for approval (y/n/e)
+   - Creates the commit if approved
 
-Display the complete commit message in a code block, then ask:
-> "Ready to commit with this message? (yes/no/edit)"
+3. **If the script fails**, it will provide clear instructions to the user:
+   - GPG key locked: Instructions to unlock
+   - No staged changes: Reminder to stage with `git add`
+   - Other errors: Specific guidance
 
-**Response handling:**
-- **"yes"** → Proceed to Step 4
-- **"no"** → Abort, ask what should change
-- **"edit"** → Ask for specific changes, revise message, show again for approval
-
-**NEVER skip this step. User must explicitly approve the message.**
-
-**Step 4: Commit in single command (only after approval)**
-```bash
-git commit -S -m "$(cat <<'EOF'
-<subject line>
-
-<optional body>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-EOF
-)"
-```
-
-**IMPORTANT:**
-- Single bash invocation (no temp files)
-- Heredoc preserves formatting
-- Script handles GPG intelligently
-- Max 5s timeout
+4. **Your role**: Simply execute the script and let it handle everything. Do not try to parse the output or take additional actions. The script is interactive and will guide the user through the entire process.
