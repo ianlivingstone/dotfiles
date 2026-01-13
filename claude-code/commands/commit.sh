@@ -356,7 +356,16 @@ generate_commit_message_ai() {
     } > "$temp_context"
 
     # Call Claude to generate commit message using --print mode
-    local commit_msg=$(claude -p "Based on this git context, generate a commit message following these rules:
+    # CRITICAL: Request raw output only, no markdown, no explanation
+    local raw_response=$(claude -p "Generate a git commit message based on the context below.
+
+CRITICAL INSTRUCTIONS:
+- Output ONLY the raw commit message text
+- NO markdown code blocks, NO backticks, NO explanation text
+- NO 'Here is the commit message:' or similar preamble
+- Just the commit message itself, ready to paste into git commit
+
+Follow these commit message rules:
 
 **Subject Line:**
 - Max 50-72 characters
@@ -370,7 +379,7 @@ generate_commit_message_ai() {
 - Wrap at 72 characters
 - Blank line after subject
 
-**Footer (required):**
+**Footer (REQUIRED - must be included):**
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
@@ -380,6 +389,19 @@ Match the style of recent commits. Here's the context:
 $(cat "$temp_context")")
 
     rm -f "$temp_context"
+
+    # Extract commit message from response (handles markdown-wrapped or raw text)
+    local commit_msg="$raw_response"
+
+    # If response contains markdown code blocks, extract the content
+    if echo "$raw_response" | grep -q '```'; then
+        # Extract text between first ``` and last ```
+        commit_msg=$(echo "$raw_response" | sed -n '/```/,/```/p' | sed '1d;$d' | sed '/^```/d')
+    fi
+
+    # Remove any leading/trailing whitespace
+    commit_msg=$(echo "$commit_msg" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+
     echo "$commit_msg"
 }
 
