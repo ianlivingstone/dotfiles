@@ -113,11 +113,12 @@ dotfiles_status() {
     # Programming Languages
     # Check if NVM is available - load it first if installed
     local nvm_loaded=false
+    local nvm_dir="$HOME/.config/nvm"
     if command -v nvm &>/dev/null; then
         nvm_loaded=true
-    elif [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+    elif [[ -s "$nvm_dir" ]]; then
         # Load NVM to check its status
-        export NVM_DIR="$HOME/.nvm"
+        export NVM_DIR="$nvm_dir"
         source "$NVM_DIR/nvm.sh" &>/dev/null
         nvm_loaded=true
     fi
@@ -548,6 +549,66 @@ fix_security_permissions() {
 quick_security_check() {
     validate_security_permissions --startup
 }
+
+# Clear caches created by this dotfiles setup. Always available in interactive shells.
+# Usage: clear-caches [completion|dotfiles|all]   (default: all)
+#        clear-caches --help
+clear-caches() {
+    local what="${1:-all}"
+    local cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
+
+    if [[ "$what" == "-h" || "$what" == "--help" || "$what" == "help" ]]; then
+        cat <<'EOF'
+🧹 clear-caches — clear caches used by this dotfiles setup
+
+Usage: clear-caches [target]
+
+Targets:
+  completion   zsh completion cache + ~/.zcompdump
+  dotfiles     cached brew shellenv, starship init, and the security-check stamp
+  all          everything above (default)
+
+All caches are rebuilt automatically on the next new shell, so clearing is safe.
+Use this if completions look stale (e.g. a newly installed brew formula is missing),
+or after upgrading brew/starship if their cached output seems out of date.
+EOF
+        return 0
+    fi
+
+    case "$what" in
+        completion|dotfiles|all) ;;
+        *)
+            echo "⚠️  Unknown target: $what (try: clear-caches --help)"
+            return 1
+            ;;
+    esac
+
+    if [[ "$what" == "completion" || "$what" == "all" ]]; then
+        rm -rf "$cache_home/zsh/zcompcache"
+        rm -f "${ZDOTDIR:-$HOME}/.zcompdump"
+        echo "🧹 Cleared zsh completion cache + .zcompdump"
+    fi
+    if [[ "$what" == "dotfiles" || "$what" == "all" ]]; then
+        rm -f "$cache_home/dotfiles/brew_shellenv.zsh" \
+              "$cache_home/dotfiles/starship_init.zsh" \
+              "$cache_home/dotfiles/security_check.stamp"
+        echo "🧹 Cleared dotfiles caches (brew shellenv, starship init, security stamp)"
+    fi
+    echo "💡 Open a new shell to rebuild them."
+}
+
+# Tab-completion for clear-caches targets. Guarded so it's a no-op when the
+# completion system isn't loaded (e.g. non-interactive shells).
+_clear_caches() {
+    local -a targets
+    targets=(
+        'completion:zsh completion cache + ~/.zcompdump'
+        'dotfiles:cached brew shellenv, starship init, security stamp'
+        'all:everything (default)'
+    )
+    _describe 'target' targets
+}
+(( $+functions[compdef] )) && compdef _clear_caches clear-caches
 
 # Version validation function
 validate_tool_versions() {

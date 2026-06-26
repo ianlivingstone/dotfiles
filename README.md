@@ -47,13 +47,19 @@ The installer will:
 
 ## 🔧 Dependencies
 
-The installer checks for these and provides install commands if missing:
+Homebrew packages are declared in the [`Brewfile`](Brewfile) and installed
+automatically by `./dotfiles.sh install` (and `reinstall`/`update`). To install or
+refresh them ad-hoc, run brew directly:
 
-**Required Tools:**
 ```bash
-brew install stow starship luarocks ripgrep neovim tmux tig
-brew install --cask docker
+brew bundle --file=Brewfile   # idempotent — installs only what's missing
 ```
+
+> `tree-sitter` (the CLI) is required by Neovim's nvim-treesitter plugin, which
+> tracks the `main` branch — it needs the CLI plus a C compiler to build parsers.
+>
+> Tools installed by other means (Homebrew itself, nvm, gvm, rustup, gopls) are
+> not in the Brewfile; the installer still checks for them and prints install commands.
 
 **Development Managers:**
 ```bash

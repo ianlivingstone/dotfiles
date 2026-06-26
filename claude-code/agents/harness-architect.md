@@ -202,21 +202,21 @@ When configuring permissions and hooks:
      "permissionMode": "acceptEdits",
      "permissions": {
        "allow": [
-         "Tool:Read",
-         "Tool:Grep",
-         "Tool:Glob",
-         "Tool:TodoWrite",
-         "bash:git status",
-         "bash:git log",
-         "bash:git diff",
-         "bash:npm test",
-         "bash:./project-script.sh *"
+         "Read",
+         "Grep",
+         "Glob",
+         "TodoWrite",
+         "Bash(git status:*)",
+         "Bash(git log:*)",
+         "Bash(git diff:*)",
+         "Bash(npm test:*)",
+         "Bash(./project-script.sh:*)"
        ],
        "deny": [
-         "bash:rm -rf *",
-         "bash:sudo *",
-         "bash:git push --force",
-         "bash:npm publish"
+         "Bash(rm -rf:*)",
+         "Bash(sudo:*)",
+         "Bash(git push*--force*)",
+         "Bash(npm publish:*)"
        ]
      },
      "hooks": {
@@ -316,7 +316,7 @@ When auditing harness security:
    ## Security Audit: .claude/settings.json
 
    **Critical Issues**:
-   - ❌ Allows `bash:rm -rf *` without restriction
+   - ❌ Allows `Bash(rm -rf:*)` without restriction
    - ❌ Hardcoded API key in hooks
 
    **Recommendations**:

@@ -6,46 +6,61 @@ Use `.claude/settings.json` for all Claude Code configuration including permissi
 
 ## Permission Management
 
+### Permission rule syntax
+
+Claude Code permission rules take one of two forms:
+
+- **Whole tool:** just the tool name, e.g. `Read`, `Grep`, `Glob`.
+- **Bash command:** `Bash(<command prefix>:*)` for prefix matching, e.g. `Bash(git status:*)`.
+
+> ⚠️ The legacy colon forms `Tool:Read` and `bash:git status*` are **no longer
+> valid**. Claude Code silently skips them in `allow` rules and `/doctor` reports
+> each one as an error. Always use the parenthesized form above.
+>
+> The `:*` suffix must be at the **end** of the pattern. To match a flag that can
+> appear anywhere in the command (deny rules only — see below), use a bare `*`
+> wildcard instead, e.g. `Bash(git push*--force*)`, with no trailing `:*`.
+
 ### MUST include in permissions.allow
 
-Safe read-only tools:
-- `Tool:Read` - Read files
-- `Tool:Grep` - Search in files
-- `Tool:Glob` - Find files by pattern
-- `Tool:LS` - List directory contents (deprecated, use Glob)
-- `Tool:TodoWrite` - Task tracking
+Safe read-only tools (allow the whole tool):
+- `Read` - Read files
+- `Grep` - Search in files
+- `Glob` - Find files by pattern
+- `TodoWrite` - Task tracking
 
-Safe bash commands:
-- `bash:ls`, `bash:pwd`, `bash:cd`
-- `bash:cat`, `bash:head`, `bash:tail`
-- `bash:grep`, `bash:find`, `bash:wc`
+Safe bash commands (prefix match):
+- `Bash(ls:*)`, `Bash(pwd:*)`, `Bash(cd:*)`
+- `Bash(cat:*)`, `Bash(head:*)`, `Bash(tail:*)`
+- `Bash(grep:*)`, `Bash(find:*)`, `Bash(wc:*)`
 
 Read-only git commands:
-- `bash:git status`
-- `bash:git log`
-- `bash:git diff`
-- `bash:git show`
+- `Bash(git status:*)`
+- `Bash(git log:*)`
+- `Bash(git diff:*)`
+- `Bash(git show:*)`
 
 Read-only system commands:
-- `bash:npm --version`
-- `bash:brew list`
-- `bash:which`
-- `bash:command -v`
+- `Bash(which:*)`
+- `Bash(command -v:*)`
 
 Repository-specific utilities:
-- `bash:./dotfiles.sh status`
-- `bash:shellcheck`
+- `Bash(./dotfiles.sh status:*)`
+- `Bash(shellcheck:*)`
 
 ### NEVER include in permissions.allow
 
-Destructive commands:
-- `bash:rm`, `bash:mv`, `bash:chmod`
-- `bash:git commit`, `bash:git push`
-- `bash:npm install`
-- `bash:sudo *`
-- `bash:brew install`
+Destructive commands (these belong in `deny`, not `allow`):
+- `Bash(rm -rf:*)`, `Bash(chmod 777:*)`
+- `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git push:*)`
+- `Bash(sudo:*)`
 
 Commands that modify state without explicit user consent.
+
+> **This repository blocks all commits.** `.claude/settings.json` denies
+> `Bash(git commit:*)` (plus `git add` and force-push), so Claude never commits,
+> stages, or force-pushes here — the user performs those steps manually. `deny`
+> always overrides `allow` and any instructions in CLAUDE.md.
 
 ### Example safe .claude/settings.json structure
 
@@ -53,29 +68,25 @@ Commands that modify state without explicit user consent.
 {
   "permissions": {
     "allow": [
-      "Tool:Read",
-      "Tool:Grep",
-      "Tool:Glob",
-      "Tool:TodoWrite",
-      "bash:git status",
-      "bash:git log",
-      "bash:git diff",
-      "bash:git show",
-      "bash:./dotfiles.sh status",
-      "bash:shellcheck*",
-      "bash:ls*",
-      "bash:cat*",
-      "bash:pwd",
-      "bash:which*",
-      "bash:command -v*"
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(./dotfiles.sh status:*)",
+      "Bash(shellcheck:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(pwd:*)",
+      "Bash(which:*)",
+      "Bash(command -v:*)"
     ],
     "deny": [
-      "bash:git commit*--no-gpg-sign*",
-      "bash:git commit*-n*",
-      "bash:git push*--force*",
-      "bash:git push*-f*",
-      "bash:rm -rf*",
-      "bash:sudo*"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push*--force*)",
+      "Bash(git push*-f*)",
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)"
     ]
   },
   "hooks": {
@@ -162,8 +173,8 @@ When creating new repository-specific commands:
 {
   "permissions": {
     "allow": [
-      "bash:./dotfiles.sh status",
-      "bash:./new-utility.sh"  // Add new safe command
+      "Bash(./dotfiles.sh status:*)",
+      "Bash(./new-utility.sh:*)"  // Add new safe command
     ]
   }
 }
@@ -218,16 +229,16 @@ Never in settings.json:
 
 ### MUST test that malicious arguments cannot cause harm
 
-Test scenarios:
+Test scenarios (verify each allowed rule cannot be abused via arguments):
 ```bash
-# Test command injection
-bash:git status "; rm -rf /"
+# Test command injection against Bash(git status:*)
+git status "; rm -rf /"
 
-# Test path traversal
-bash:./dotfiles.sh status "../../../etc/passwd"
+# Test path traversal against Bash(./dotfiles.sh status:*)
+./dotfiles.sh status "../../../etc/passwd"
 
-# Test privilege escalation
-bash:which "sudo rm -rf /"
+# Test privilege escalation against Bash(which:*)
+which "sudo rm -rf /"
 ```
 
 ### SHOULD periodically audit permission list for security implications

@@ -1,6 +1,12 @@
 #!/usr/bin/env zsh
 # uv (Python package and project manager) setup and configuration
 # SOURCED MODULE: Uses graceful error handling, never use set -e
+#
+# uv is managed by Homebrew (see Brewfile), so its binary is already on PATH via
+# `brew shellenv` — no curl-installer `env` script or ~/.local/bin handling needed.
+# This module only validates the uv version and wires up uv-managed Python, both of
+# which are independent of how uv itself was installed (Pythons live under
+# ~/.local/share/uv/python regardless).
 
 # Load utility functions
 source "$(cd "$(dirname "${(%):-%N}")" && pwd)/utils.sh"
@@ -14,44 +20,11 @@ UV_VERSION=$(get_version_requirement "uv" || echo "0.5.0")
 # Get PYTHON_VERSION from versions.config or use fallback
 PYTHON_VERSION=$(get_version_requirement "python" || echo "3.11")
 
-# Setup uv paths
-export UV_HOME="$HOME/.local"
-UV_BIN="$UV_HOME/bin"
-UV_ENV_SCRIPT="$UV_BIN/env"
-
-# Load uv environment lazily - only when first needed
-load_uv() {
-    # Check if uv already loaded
-    if [[ "$DOTFILES_UV_LOADED" == "1" ]]; then
-        return 0
-    fi
-
-    if [[ -f "$UV_ENV_SCRIPT" ]]; then
-        source "$UV_ENV_SCRIPT"
-        export DOTFILES_UV_LOADED=1
-        return 0
-    fi
-    return 1
-}
-
-# Check if uv exists and set up
-if [[ -x "$UV_BIN/uv" ]]; then
-    # Ensure the uv bin directory is in PATH for immediate access
-    add_to_path "$UV_BIN"
-
-    # Load uv environment script if it exists
-    if [[ -f "$UV_ENV_SCRIPT" ]]; then
-        source "$UV_ENV_SCRIPT"
-        export DOTFILES_UV_LOADED=1
-    fi
-
+if command -v uv &>/dev/null; then
     # Check uv version matches configured version
     local installed_version=$(uv --version 2>/dev/null | awk '{print $2}' || echo "unknown")
-    if [[ "$installed_version" != "unknown" ]]; then
-        # Compare versions (simple string comparison for now)
-        if [[ "$installed_version" < "$UV_VERSION" ]]; then
-            show_warning "uv version $installed_version is older than required $UV_VERSION"
-        fi
+    if [[ "$installed_version" != "unknown" && "$installed_version" < "$UV_VERSION" ]]; then
+        show_warning "uv version $installed_version is older than required $UV_VERSION (update with: brew upgrade uv)"
     fi
 
     # Find and prioritize uv-managed Python in PATH
@@ -124,11 +97,7 @@ if [[ -x "$UV_BIN/uv" ]]; then
             uv python install "$PYTHON_VERSION" 2>/dev/null || echo "⚠️  Failed to install Python via uv"
         fi
     fi
-
-elif [[ -d "$UV_HOME" ]]; then
-    # UV_HOME exists but uv binary is missing - likely not installed
-    echo "⚠️  uv not found. Install with: curl -LsSf https://astral.sh/uv/install.sh | sh"
 else
-    # UV not installed
-    echo "❌ uv not found. Install with: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    # uv not installed - it is managed by Homebrew
+    show_warning "uv not found. Install with: brew install uv  (or: ./dotfiles.sh update)"
 fi

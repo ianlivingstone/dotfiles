@@ -2,15 +2,14 @@
   "permissions": {
     "deny": [
       "Bash(git add:*)",
-      "Bash(git add *:*)",
-      "Bash(git commit*--no-gpg-sign:*)",
-      "Bash(git commit*-n:*)",
-      "Bash(git commit*--no-verify:*)"
+      "Bash(git commit:*)"
     ]
   },
-  "alwaysThinkingEnabled": true,
-  "autoUpdate": false,
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
-  }
+  },
+  "alwaysThinkingEnabled": true,
+  "theme": "auto",
+  "autoUpdate": false,
+  "tui": "fullscreen"
 }

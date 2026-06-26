@@ -178,11 +178,18 @@ For more on documentation strategy: `docs/architecture/documentation-strategy.md
 ## Quick Start for Common Tasks
 
 **Commit changes:**
-1. Stage changes: `git add <files>` (USER does this, not Claude)
-2. Verify: `git status`
-3. Commit with single command (5s timeout):
-```bash
-git commit -S -m "$(cat <<'EOF'
+
+> **Claude does NOT stage, commit, or push in this repository.** `.claude/settings.json`
+> denies `Bash(git add:*)`, `Bash(git commit:*)`, and force-push. The USER performs all
+> staging and committing. Claude's role is limited to making the edits and drafting the
+> commit message text below for the user to use.
+
+1. Claude makes the file changes only.
+2. USER stages and reviews: `git add <files>` then `git status`.
+3. USER commits (signing is required) using a message that follows the conventions below.
+
+Commit message template (for the user to apply):
+```text
 <verb> <what changed>
 
 <why - optional>
@@ -190,11 +197,9 @@ git commit -S -m "$(cat <<'EOF'
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-EOF
-)"
 ```
 
-**Commit rules:**
+**Commit message rules:**
 - Use imperative mood: "Add feature" not "Added feature"
 - Subject: 50-72 chars max
 - Be specific: "Add gopls config" not "Update files"

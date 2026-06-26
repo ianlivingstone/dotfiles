@@ -7,10 +7,19 @@ The `dotfiles.sh` script is the main management interface for the dotfiles syste
 **Available commands:**
 - `install` - Initial installation with interactive configuration
 - `status` - Validate installation and check version compliance
-- `update` - Update Node.js and Go to versions specified in versions.config
+- `update` - Update Node.js/Go/Python versions and install Homebrew packages
 - `reinstall` - Uninstall and reinstall all packages
 - `uninstall` - Remove all dotfiles symlinks
 - `help` - Show help information
+
+## Homebrew packages
+
+Homebrew formulae and casks are declared in the repo-root `Brewfile` and installed
+via `brew bundle` (idempotent — installs only what's missing). This runs automatically
+inside `install`, `reinstall`, and `update`; run it ad-hoc with `brew bundle --file=Brewfile`.
+
+The `Brewfile` is the source of truth for brew packages. Tools installed by other means
+(Homebrew itself, nvm, gvm, rustup, gopls) are intentionally excluded and documented there.
 
 ## install Command
 

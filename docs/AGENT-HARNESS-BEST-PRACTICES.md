@@ -600,17 +600,17 @@ Use `permissionMode` to control agent capabilities:
   "permissionMode": "acceptEdits",  // Allow file edits without approval
   "permissions": {
     "allow": [
-      "Tool:Read",
-      "Tool:Grep",
-      "Tool:Glob",
-      "bash:git status",
-      "bash:npm test"
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(git status:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [
-      "bash:rm *",
-      "bash:sudo *",
-      "bash:git push",
-      "bash:npm publish"
+      "Bash(rm:*)",
+      "Bash(sudo:*)",
+      "Bash(git push:*)",
+      "Bash(npm publish:*)"
     ]
   }
 }
@@ -1008,21 +1008,21 @@ Create `.claude/settings.json`:
   "permissionMode": "acceptEdits",
   "permissions": {
     "allow": [
-      "Tool:Read",
-      "Tool:Grep",
-      "Tool:Glob",
-      "Tool:TodoWrite",
-      "bash:git status",
-      "bash:git log",
-      "bash:git diff",
-      "bash:npm test",
-      "bash:npm run lint"
+      "Read",
+      "Grep",
+      "Glob",
+      "TodoWrite",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run lint:*)"
     ],
     "deny": [
-      "bash:rm -rf",
-      "bash:sudo *",
-      "bash:git push --force",
-      "bash:npm publish"
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)",
+      "Bash(git push*--force*)",
+      "Bash(npm publish:*)"
     ]
   },
   "hooks": {

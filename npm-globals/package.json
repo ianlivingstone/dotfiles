@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@anthropic-ai/claude-code": "^2.1.5",
+    "@anthropic-ai/claude-code": "^2.1.191",
     "@biomejs/biome": "2.3.11",
     "@typespec/compiler": "^1.7.1",
     "eslint": "9.39.2",

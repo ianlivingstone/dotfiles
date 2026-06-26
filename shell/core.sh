@@ -10,7 +10,28 @@ export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 
 # General Config
 export GPG_TTY=$(tty)
-eval $(brew shellenv)
+
+# Homebrew environment — cache `brew shellenv` output instead of forking brew on
+# every shell. Regenerate only when the brew binary is newer than the cache.
+local brew_bin=""
+local _b
+for _b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    [[ -x "$_b" ]] && { brew_bin="$_b"; break; }
+done
+if [[ -n "$brew_bin" ]]; then
+    local brew_cache="${XDG_CACHE_HOME}/dotfiles/brew_shellenv.zsh"
+    if [[ ! -s "$brew_cache" || "$brew_bin" -nt "$brew_cache" ]]; then
+        mkdir -p "${brew_cache:h}"
+        # Write atomically: a partial/failed shellenv must never be sourced.
+        local brew_tmp="${brew_cache}.$$"
+        if "$brew_bin" shellenv > "$brew_tmp" 2>/dev/null && [[ -s "$brew_tmp" ]]; then
+            mv -f "$brew_tmp" "$brew_cache"
+        else
+            rm -f "$brew_tmp"
+        fi
+    fi
+    [[ -s "$brew_cache" ]] && source "$brew_cache"
+fi
 
 # Fix compinit security check
 ZSH_DISABLE_COMPFIX=true
@@ -28,3 +49,15 @@ else
     compinit -u
 fi
 unsetopt EXTENDEDGLOB
+
+# Completion behavior + caching.
+# use-cache makes expensive completers (brew, git, etc.) store their results
+# instead of recomputing the list on every Tab press — this is the main fix for
+# "tab completion is slow sometimes". The rest are quality-of-life: an arrow-key
+# menu and case-insensitive matching.
+local zcompcache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompcache"
+mkdir -p "$zcompcache"
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "$zcompcache"
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'

@@ -111,14 +111,15 @@ install_npm_globals() {
         return 1
     fi
 
-    # Extract package@version pairs from package.json
+    # Extract package and version pairs using '|' to safely handle scoped names
     local packages_to_install=()
-    while IFS='@' read -r package version; do
+    while IFS='|' read -r package version; do
         if [[ -n "$package" ]] && [[ -n "$version" ]]; then
             # Get currently installed version (if any)
             local installed_version=""
             if npm list -g "$package" >/dev/null 2>&1; then
-                installed_version=$(npm list -g "$package" --depth=0 2>/dev/null | grep "$package@" | sed 's/.*@//' | head -1)
+                # Strip clean versions; using sed to target only everything after the trailing @
+                installed_version=$(npm list -g "$package" --depth=0 2>/dev/null | grep -E "$package@[0-9]" | sed 's/.*@//' | head -1)
             fi
 
             # Check if we need to install/update
@@ -132,7 +133,8 @@ install_npm_globals() {
                 echo "  ✓ $package@$version (already up to date)"
             fi
         fi
-    done < <(jq -r '.dependencies | to_entries[] | "\(.key)@\(.value)"' "$package_json" 2>/dev/null)
+    # CHANGED: 'jq' now prints a pipe delimiter, and IFS looks for that pipe instead
+    done < <(jq -r '.dependencies | to_entries[] | "\(.key)|\(.value)"' "$package_json" 2>/dev/null)
 
     # Install/update packages if needed
     if [[ ${#packages_to_install[@]} -gt 0 ]]; then

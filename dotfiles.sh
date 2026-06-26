@@ -48,7 +48,7 @@ show_help() {
     echo "  uninstall   Remove all dotfile symlinks"
     echo "  reinstall   Uninstall then install dotfiles"
     echo "  status      Show status of dotfile symlinks"
-    echo "  update      Update development environment versions"
+    echo "  update      Update dev environment versions + Homebrew packages"
     echo "  help        Show this help message"
     echo ""
     echo "Examples:"
@@ -117,6 +117,22 @@ check_dependencies() {
         missing_deps+=("tig")
     fi
 
+    if ! command -v tree-sitter &> /dev/null; then
+        missing_deps+=("tree-sitter")
+    fi
+
+    if ! command -v gh &> /dev/null; then
+        missing_deps+=("gh")
+    fi
+
+    if ! command -v jj &> /dev/null; then
+        missing_deps+=("jj")
+    fi
+
+    if ! command -v shellcheck &> /dev/null; then
+        missing_deps+=("shellcheck")
+    fi
+
     # Note: Python is managed by uv (checked in shell/uv.sh module)
 
     # Check for Go tools (can be auto-installed)
@@ -141,13 +157,9 @@ check_dependencies() {
         missing_deps+=("rustup")
     fi
 
-    # Check for uv (can be auto-installed)
+    # Check for uv (managed by Homebrew — see Brewfile; installed by install/update)
     if ! command -v uv &> /dev/null; then
-        if [[ "$auto_install" == "true" ]]; then
-            installable_deps+=("uv")
-        else
-            missing_deps+=("uv")
-        fi
+        missing_deps+=("uv")
     fi
 
     # Check for security tools
@@ -169,17 +181,6 @@ check_dependencies() {
                     else
                         echo -e "${RED}❌ Failed to install gopls${NC}"
                         missing_deps+=("gopls")
-                    fi
-                    ;;
-                uv)
-                    echo -e "${YELLOW}⚠️  uv not found, installing...${NC}"
-                    if curl -LsSf https://astral.sh/uv/install.sh | sh; then
-                        echo -e "${GREEN}✅ uv installed successfully!${NC}"
-                        # Source the uv shell config to make it available immediately
-                        export PATH="$HOME/.local/bin:$PATH"
-                    else
-                        echo -e "${RED}❌ Failed to install uv${NC}"
-                        missing_deps+=("uv")
                     fi
                     ;;
             esac
@@ -208,46 +209,21 @@ check_dependencies() {
     # Report missing required dependencies
     if [ ${#missing_deps[@]} -ne 0 ]; then
         echo -e "${RED}❌ Missing required dependencies:${NC}"
+        # Tools declared in the Brewfile are installed by `./dotfiles.sh install`
+        # (which runs `brew bundle`); collect them and print one pointer instead of
+        # a separate `brew install X` per tool. Tools installed by other means keep
+        # their specific one-line install command.
+        local brew_missing=()
         for dep in "${missing_deps[@]}"; do
             case $dep in
-                "stow")
-                    echo -e "  ${RED}•${NC} GNU Stow: brew install stow"
+                stow|starship|git|zsh|luarocks|rg|jq|just|duckdb|nvim|tmux|tig|tree-sitter|gh|jj|shellcheck|uv|gpg|docker)
+                    brew_missing+=("$dep")
                     ;;
-                "starship")
-                    echo -e "  ${RED}•${NC} Starship: brew install starship"
-                    ;;
-                "git")
-                    echo -e "  ${RED}•${NC} Git: brew install git"
-                    ;;
-                "zsh")
-                    echo -e "  ${RED}•${NC} Zsh: brew install zsh"
-                    ;;
-                "luarocks")
-                    echo -e "  ${RED}•${NC} Luarocks: brew install luarocks"
-                    ;;
-                "rg")
-                    echo -e "  ${RED}•${NC} Ripgrep: brew install ripgrep"
-                    ;;
-                "jq")
-                    echo -e "  ${RED}•${NC} jq: brew install jq"
+                "docker-upgrade")
+                    echo -e "  ${RED}•${NC} Docker: brew upgrade --cask docker-desktop (requires version 28+)"
                     ;;
                 "brew")
                     echo -e "  ${RED}•${NC} Homebrew: /bin/bash -c \"\$($SECURE_CURL -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-                    ;;
-                "just")
-                    echo -e "  ${RED}•${NC} just: brew install just"
-                    ;;
-                "duckdb")
-                    echo -e "  ${RED}•${NC} duckdb: brew install duckdb"
-                    ;;
-                "nvim")
-                    echo -e "  ${RED}•${NC} Neovim: brew install neovim"
-                    ;;
-                "tmux")
-                    echo -e "  ${RED}•${NC} Tmux: brew install tmux"
-                    ;;
-                "tig")
-                    echo -e "  ${RED}•${NC} Tig: brew install tig"
                     ;;
                 "gopls")
                     echo -e "  ${RED}•${NC} gopls: go install golang.org/x/tools/gopls@latest"
@@ -261,20 +237,14 @@ check_dependencies() {
                 "rustup")
                     echo -e "  ${RED}•${NC} Rustup: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
                     ;;
-                "uv")
-                    echo -e "  ${RED}•${NC} uv: curl -LsSf https://astral.sh/uv/install.sh | sh"
-                    ;;
-                "gpg")
-                    echo -e "  ${RED}•${NC} GnuPG: brew install gnupg"
-                    ;;
-                "docker")
-                    echo -e "  ${RED}•${NC} Docker: brew install --cask docker"
-                    ;;
-                "docker-upgrade")
-                    echo -e "  ${RED}•${NC} Docker: brew upgrade --cask docker (requires version 28+)"
-                    ;;
             esac
         done
+
+        # All Brewfile-managed tools: one pointer to the command that installs them.
+        if [ ${#brew_missing[@]} -ne 0 ]; then
+            echo -e "  ${RED}•${NC} Homebrew packages (${brew_missing[*]}):"
+            echo -e "      run ${GREEN}./dotfiles.sh install${NC}  (installs the Brewfile via brew bundle)"
+        fi
         echo ""
         echo -e "${YELLOW}Install missing dependencies and try again.${NC}"
         exit 1
@@ -284,6 +254,33 @@ check_dependencies() {
     echo -e "${BLUE}💡 After installing dependencies, recommended setup:${NC}"
     echo -e "  ${BLUE}•${NC} Install Node.js: nvm install --lts && nvm use --lts"
     echo ""
+}
+
+install_brew_packages() {
+    local brewfile="$DOTFILES_DIR/Brewfile"
+
+    if ! command -v brew &> /dev/null; then
+        echo -e "${YELLOW}⚠️  Homebrew not found; skipping brew packages.${NC}"
+        echo -e "  ${BLUE}•${NC} Install Homebrew first, then re-run: $0 install"
+        return 1
+    fi
+
+    if [[ ! -f "$brewfile" ]]; then
+        echo -e "${RED}❌ Brewfile not found at $brewfile${NC}"
+        return 1
+    fi
+
+    echo -e "${BLUE}📦 Installing Homebrew packages from Brewfile...${NC}"
+    # brew bundle is idempotent: it installs anything missing and is a no-op otherwise.
+    if brew bundle --file="$brewfile"; then
+        echo -e "${GREEN}✅ Homebrew packages are up to date${NC}"
+        echo ""
+        return 0
+    else
+        echo -e "${RED}❌ Some Homebrew packages failed to install${NC}"
+        echo ""
+        return 1
+    fi
 }
 
 detect_ssh_keys() {
@@ -467,39 +464,58 @@ configure_git_user() {
 detect_gpg_keys() {
     echo -e "${BLUE}🔍 Scanning for GPG keys...${NC}"
 
+    # Commit signing is required (commit.gpgsign = true), so a key is mandatory.
+    # This function MUST end with GPG_SELECTED_KEY set, or return non-zero so the
+    # caller halts install — it can never leave signing unconfigured.
+
     # Check if gpg is available
     if ! command -v gpg &> /dev/null; then
-        echo -e "${YELLOW}⚠️  GPG not found, skipping GPG key setup${NC}"
+        echo -e "${RED}❌ GPG not found, but commit signing is required.${NC}"
+        echo -e "${BLUE}💡 Install it (brew install gnupg), then re-run install.${NC}"
         return 1
     fi
 
     local gpg_keys=($(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep '^sec' | awk '{print $2}' | cut -d'/' -f2))
 
     if [ ${#gpg_keys[@]} -eq 0 ]; then
-        echo -e "${YELLOW}⚠️  No GPG private keys found${NC}"
-        echo -e "${BLUE}💡 Generate with: gpg --full-generate-key${NC}"
+        echo -e "${RED}❌ No GPG private keys found, but commit signing is required.${NC}"
+        echo -e "${BLUE}💡 Generate one: gpg --full-generate-key   (then re-run ./dotfiles.sh install)${NC}"
         echo ""
         return 1
     fi
 
-    # Check for existing GPG key (including machine.config via include)
-    local cached_key=""
-    local cached_selection=""
+    # Pick a sensible default key (used for auto-select and as the prompt default):
+    #   1) the key already configured (cached, via git config), else
+    #   2) a key whose UID matches the configured git email, else
+    #   3) the first key.
+    local default_idx=""
     local existing_key=$(git config user.signingkey 2>/dev/null || echo "")
-
-    if [[ -n "$existing_key" ]]; then
-        # Find index of cached key
-        local idx=1
+    local idx=1
+    for key in "${gpg_keys[@]}"; do
+        if [[ -n "$existing_key" && "$key" == "$existing_key" ]]; then
+            default_idx="$idx"; break
+        fi
+        ((idx++))
+    done
+    if [[ -z "$default_idx" && -n "${GIT_USER_EMAIL:-}" ]]; then
+        idx=1
         for key in "${gpg_keys[@]}"; do
-            if [[ "$key" == "$existing_key" ]]; then
-                cached_key="$existing_key"
-                cached_selection="$idx"
-                break
+            if gpg --list-keys "$key" 2>/dev/null | grep -qi "<$GIT_USER_EMAIL>"; then
+                default_idx="$idx"; break
             fi
             ((idx++))
         done
     fi
+    [[ -z "$default_idx" ]] && default_idx=1
 
+    # Exactly one key: auto-select it. No prompt, nothing to skip.
+    if [ ${#gpg_keys[@]} -eq 1 ]; then
+        GPG_SELECTED_KEY="${gpg_keys[1]}"
+        echo -e "${GREEN}✅ Using the only GPG key found: $GPG_SELECTED_KEY${NC}"
+        return 0
+    fi
+
+    # Multiple keys: show them and choose. We always end with a valid key.
     echo -e "${GREEN}Found GPG keys:${NC}"
     local i=1
     for key in "${gpg_keys[@]}"; do
@@ -507,37 +523,29 @@ detect_gpg_keys() {
         echo -e "  ${GREEN}$i.${NC} $key - $key_info"
         ((i++))
     done
-
     echo ""
-    echo "Select a key for Git commit signing (or 'none' to skip):"
 
-    local selection=""
-    # If not in a terminal (non-interactive) and we have cached selection, use it
-    if ! tty -s && [[ -n "$cached_selection" ]]; then
-        echo -e "${BLUE}📋 Using existing GPG key selection (non-interactive mode): $cached_selection${NC}"
-        selection="$cached_selection"
-    else
-        if [[ -n "$cached_selection" ]]; then
-            printf "Selection (number or 'none') [%s]: " "$cached_selection"
-        else
-            printf "Selection (number or 'none'): "
-        fi
-        read -r selection < /dev/tty
-        # Use cached value if Enter pressed
-        selection="${selection:-$cached_selection}"
-    fi
-    
-    if [[ "$selection" == "none" ]]; then
-        return 1
-    fi
-    
-    if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le ${#gpg_keys[@]} ]; then
-        GPG_SELECTED_KEY="${gpg_keys[$selection]}"
+    # Non-interactive: take the computed default (cached/email/first), never empty.
+    if ! tty -s; then
+        GPG_SELECTED_KEY="${gpg_keys[$default_idx]}"
+        echo -e "${BLUE}📋 Non-interactive: selected key #$default_idx ($GPG_SELECTED_KEY)${NC}"
         return 0
-    else
-        echo -e "${YELLOW}⚠️  Invalid selection${NC}"
-        return 1
     fi
+
+    # Interactive: loop until a valid number is entered. Enter accepts the default.
+    # There is intentionally no "none" option — signing is required.
+    local selection=""
+    while true; do
+        printf "Select a key for commit signing [%s]: " "$default_idx"
+        read -r selection < /dev/tty
+        selection="${selection:-$default_idx}"
+        if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le ${#gpg_keys[@]} ]; then
+            GPG_SELECTED_KEY="${gpg_keys[$selection]}"
+            echo -e "${GREEN}✅ Selected key: $GPG_SELECTED_KEY${NC}"
+            return 0
+        fi
+        echo -e "${YELLOW}⚠️  Enter a number between 1 and ${#gpg_keys[@]}.${NC}"
+    done
 }
 
 configure_machine_keys() {
@@ -566,23 +574,14 @@ configure_machine_keys() {
         echo "    name = $GIT_USER_NAME" >> "$git_config"
         echo "    email = $GIT_USER_EMAIL" >> "$git_config"
         
-        # Add signing key if selected
-        if [[ -n "$GPG_SELECTED_KEY" ]]; then
-            echo "    signingkey = $GPG_SELECTED_KEY" >> "$git_config"
-        fi
-        
+        # Signing key — install guarantees one is set (see detect_gpg_keys).
+        echo "    signingkey = $GPG_SELECTED_KEY" >> "$git_config"
+
         echo -e "${GREEN}✅ Git user and signing configuration saved${NC}"
     else
         echo -e "${RED}❌ Git user configuration missing${NC}"
     fi
-    
-    if [[ -z "$GPG_SELECTED_KEY" ]]; then
-        echo "" >> "$git_config"
-        echo "# No GPG key selected - commits will fail due to required signing" >> "$git_config"
-        echo -e "${YELLOW}⚠️  No GPG key configured - commits will fail due to required signing${NC}"
-        echo -e "${BLUE}💡 Generate a GPG key with: gpg --full-generate-key${NC}"
-    fi
-    
+
     # Generate complete GPG config (GPG doesn't support includes)
     # Use shared template and add machine-specific settings
     local gpg_main_config="$HOME/.gnupg/gpg.conf"
@@ -605,14 +604,10 @@ configure_machine_keys() {
         echo "# === MACHINE-SPECIFIC CONFIG ===" >> "$gpg_main_config"
         echo "# Generated by dotfiles on $(date) for: $machine_id" >> "$gpg_main_config"
         
-        if [[ -n "$GPG_SELECTED_KEY" ]]; then
-            echo "default-key $GPG_SELECTED_KEY" >> "$gpg_main_config"
-            echo -e "${GREEN}✅ GPG configuration generated with key: $GPG_SELECTED_KEY${NC}"
-        else
-            echo "# No GPG key selected - commits will fail due to required signing" >> "$gpg_main_config"
-            echo -e "${YELLOW}⚠️  GPG configuration generated without key${NC}"
-        fi
-        
+        # install guarantees a key is set (see detect_gpg_keys).
+        echo "default-key $GPG_SELECTED_KEY" >> "$gpg_main_config"
+        echo -e "${GREEN}✅ GPG configuration generated with key: $GPG_SELECTED_KEY${NC}"
+
         echo "# === END MACHINE-SPECIFIC CONFIG ===" >> "$gpg_main_config"
         
         # Generate gpg-agent.conf with dynamic pinentry detection
@@ -751,6 +746,8 @@ install_dotfiles() {
     echo -e "${GREEN}🏠 Installing dotfiles...${NC}"
 
     if [[ "$skip_dep_check" != "true" ]]; then
+        # Install brew packages first so the dependency check below passes.
+        install_brew_packages
         check_dependencies
     fi
 
@@ -814,13 +811,19 @@ install_dotfiles() {
     
     echo ""
     
-    # Detect and configure GPG keys
+    # Detect and configure GPG keys. Commit signing is required (commit.gpgsign = true),
+    # so install MUST NOT proceed without a key — that would write a config that breaks
+    # every commit. Halt and tell the user how to fix it instead.
     if detect_gpg_keys; then
         echo -e "${GREEN}✅ GPG key selected${NC}"
+    else
+        echo -e "${RED}❌ A GPG signing key is required but none was configured.${NC}"
+        echo -e "${BLUE}💡 Create/import a key, then re-run: ./dotfiles.sh install${NC}"
+        return 1
     fi
-    
+
     echo ""
-    
+
     # Configure machine-specific settings
     configure_machine_keys
     
@@ -1083,6 +1086,9 @@ update_environment() {
     # Check and install brew-based tools
     echo -e "${BLUE}🍺 Checking Homebrew tools...${NC}"
 
+    # Install anything declared in the Brewfile that's missing.
+    install_brew_packages
+
     # Check for just
     local JUST_VERSION=$(get_version_requirement "just")
     if [[ -n "$JUST_VERSION" ]]; then
@@ -1139,8 +1145,8 @@ update_environment() {
     local NODE_VERSION=$(get_version_requirement "node")
     if [[ -n "$NODE_VERSION" ]]; then
         # Ensure NVM is loaded
-        if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
-            source "$HOME/.nvm/nvm.sh"
+        if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+            source "$NVM_DIR/nvm.sh"
             
             echo -e "${BLUE}📦 Installing Node.js $NODE_VERSION...${NC}"
             nvm install "$NODE_VERSION"
@@ -1255,11 +1261,11 @@ update_environment() {
             local installed_uv_version=$(uv --version 2>/dev/null | awk '{print $2}' || echo "unknown")
             if [[ "$installed_uv_version" != "unknown" ]]; then
                 echo -e "${BLUE}📦 uv $installed_uv_version is already installed${NC}"
-                echo -e "${BLUE}💡 To update uv, run: curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
+                echo -e "${BLUE}💡 To update uv, run: brew upgrade uv${NC}"
             fi
         else
             echo -e "${YELLOW}⚠️  uv not found${NC}"
-            echo -e "${BLUE}💡 Install with: curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
+            echo -e "${BLUE}💡 Install with: brew install uv  (or ./dotfiles.sh update)${NC}"
         fi
     fi
 
@@ -1288,7 +1294,7 @@ update_environment() {
             uv python list 2>/dev/null || echo "  No Python versions found"
         else
             echo -e "${RED}❌ uv not found. Cannot manage Python versions.${NC}"
-            echo -e "${BLUE}💡 Install uv first: curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
+            echo -e "${BLUE}💡 Install uv first: brew install uv  (or ./dotfiles.sh update)${NC}"
         fi
     else
         echo -e "${YELLOW}⚠️  Python version not specified in versions.config${NC}"
@@ -1351,6 +1357,8 @@ case "${1:-help}" in
     "reinstall")
         uninstall_dotfiles
         echo ""
+        # Install brew packages first so the dependency check below passes.
+        install_brew_packages
         # Enable auto-install for reinstall to avoid blocking on gopls/uv
         check_dependencies true
         if [[ $? -ne 0 ]]; then
