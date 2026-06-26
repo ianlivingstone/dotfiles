@@ -179,31 +179,22 @@ For more on documentation strategy: `docs/architecture/documentation-strategy.md
 
 **Commit changes:**
 
-> **Claude does NOT stage, commit, or push in this repository.** `.claude/settings.json`
-> denies `Bash(git add:*)`, `Bash(git commit:*)`, and force-push. The USER performs all
-> staging and committing. Claude's role is limited to making the edits and drafting the
-> commit message text below for the user to use.
+> Claude must NOT run `git add` or `git commit` **directly** — the project and global
+> `settings.json` deny them (plus force-push), so Claude can't commit ad-hoc. The ONE
+> **sanctioned** commit path is the `/commit` skill, which runs
+> `claude-code/commands/commit.sh`: it checks GPG, generates the message, and creates a
+> **signed** commit. The script runs `git commit` in a subprocess, which is allowed by
+> design (the deny only intercepts top-level Bash commands). Do not hand-roll other
+> bypasses (`git -C`, awk/python wrappers) to commit.
 
-1. Claude makes the file changes only.
-2. USER stages and reviews: `git add <files>` then `git status`.
-3. USER commits (signing is required) using a message that follows the conventions below.
+1. Claude makes the file changes.
+2. USER stages what to include: `git add <files>`.
+3. Run `/commit` (or `./claude-code/commands/commit.sh ai`) — it generates and signs the commit.
 
-Commit message template (for the user to apply):
-```text
-<verb> <what changed>
-
-<why - optional>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-```
-
-**Commit message rules:**
-- Use imperative mood: "Add feature" not "Added feature"
-- Subject: 50-72 chars max
-- Be specific: "Add gopls config" not "Update files"
-- Full guide: `claude-code/commands/commit.md`
+**Commit message conventions** (built into commit.sh; full guide `claude-code/commands/commit.md`):
+- Imperative mood: "Add feature" not "Added feature"
+- Subject: 50-72 chars, specific ("Add gopls config", not "Update files")
+- Footer: Claude Code attribution + `Co-Authored-By` trailer
 
 **Add new package:**
 1. Create package directory: `mkdir mypackage`

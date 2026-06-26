@@ -57,10 +57,12 @@ Destructive commands (these belong in `deny`, not `allow`):
 
 Commands that modify state without explicit user consent.
 
-> **This repository blocks all commits.** `.claude/settings.json` denies
-> `Bash(git commit:*)` (plus `git add` and force-push), so Claude never commits,
-> stages, or force-pushes here — the user performs those steps manually. `deny`
-> always overrides `allow` and any instructions in CLAUDE.md.
+> **Direct commits are denied.** `.claude/settings.json` (and the global `~/.claude`
+> settings) deny `Bash(git commit:*)`, `Bash(git add:*)`, and force-push, so Claude
+> can't commit/stage ad-hoc — `deny` overrides `allow` and any instructions. The ONE
+> sanctioned commit path is the `/commit` skill (`claude-code/commands/commit.sh`),
+> which runs `git commit` in a subprocess; that's allowed by design, since the deny
+> only intercepts top-level Bash commands.
 
 ### Example safe .claude/settings.json structure
 

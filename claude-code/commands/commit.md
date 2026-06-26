@@ -20,6 +20,10 @@ Create commits with AI-generated messages following best practices.
 - Reduces round trips (one script call does everything)
 - Deterministic behavior (script handles all edge cases)
 - User maintains control (interactive approval built into script)
+- **Sanctioned despite the deny**: `git add`/`git commit` are denied globally
+  (`~/.claude/settings.json`) so Claude can't commit ad-hoc. commit.sh runs `git commit`
+  in a subprocess, which is allowed by design — this is the one approved commit path, so
+  when the user invokes `/commit`, run it without hesitating.
 
 ## Commit Message Guidelines (for reference only)
 
