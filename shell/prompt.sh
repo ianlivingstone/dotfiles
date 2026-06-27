@@ -10,13 +10,13 @@ source "$SHELL_DIR/utils.sh"
 shell_status() {
     # Only show for interactive shells
     [[ $- != *i* ]] && return
-    
+
     # Use zsh builtins instead of forking whoami/hostname/pwd|sed.
     # (Dropped the uptime segment: it spawned 5 processes for marginal value.)
     local user_host="${USER}@${HOST%%.*}"
     local current_dir="${PWD/#$HOME/~}"
     local current_time="$(date '+%H:%M')"
-    
+
     # Git info if in a git repository
     local git_info=""
     if git rev-parse --git-dir > /dev/null 2>&1; then
@@ -29,13 +29,13 @@ shell_status() {
         fi
         git_info="📦 $branch $git_status | "
     fi
-    
+
     # Battery info if available
     local battery_info=""
     if battery_status=$(get_battery_status 2>/dev/null); then
         battery_info="$battery_status | "
     fi
-    
+
     echo "🏠 $user_host $current_dir | $git_info$battery_info🕐 $current_time"
 }
 
@@ -45,10 +45,11 @@ if command -v starship >/dev/null 2>&1; then
     local starship_bin="$(command -v starship)"
     local starship_cache="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/starship_init.zsh"
     if [[ ! -s "$starship_cache" || "$starship_bin" -nt "$starship_cache" ]]; then
-        mkdir -p "${starship_cache:h}"
-        # Write atomically: a partial/failed init script must never be sourced.
+        mkdir -p "${starship_cache:h}" && chmod 700 "${starship_cache:h}"
+        # Write atomically (never source a partial init script) and as 0600 (umask 077)
+        # since this file is sourced at startup.
         local starship_tmp="${starship_cache}.$$"
-        if starship init zsh > "$starship_tmp" 2>/dev/null && [[ -s "$starship_tmp" ]]; then
+        if ( umask 077; starship init zsh > "$starship_tmp" 2>/dev/null ) && [[ -s "$starship_tmp" ]]; then
             mv -f "$starship_tmp" "$starship_cache"
         else
             rm -f "$starship_tmp"
@@ -93,7 +94,8 @@ if [[ $- == *i* ]]; then
     fi
     if (( _sec_run )); then
         quick_security_check
-        mkdir -p "${sec_stamp:h}" && touch "$sec_stamp"
+        # 700 dir so another user can't `touch` the stamp to suppress the security check.
+        mkdir -p "${sec_stamp:h}" && chmod 700 "${sec_stamp:h}" && touch "$sec_stamp"
     fi
     unsetopt EXTENDEDGLOB
 

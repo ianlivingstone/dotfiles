@@ -6,11 +6,15 @@
 SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%N}}")" && pwd)"
 source "$SHELL_DIR/utils.sh"
 
+# Dotfiles repo root (parent of shell/) — derived, never hardcoded, so it works on any
+# machine and doesn't bake a username/path into shared source.
+DOTFILES_ROOT="$(dirname "$SHELL_DIR")"
+
 # Generic stow-based status checker
 check_package_status() {
     local entry="$1"
     local dotfiles_dir="$2"
-    
+
     # Parse package:target format (same logic as dotfiles.sh)
     local package target
     if [[ "$entry" == *":"* ]]; then
@@ -24,19 +28,19 @@ check_package_status() {
         package="$entry"
         target="$HOME"
     fi
-    
+
     # Skip if package directory doesn't exist
     if [[ ! -d "$dotfiles_dir/$package" ]]; then
         echo "   ❌ $package → package directory not found"
         return 1
     fi
-    
+
     # Use stow to check if package is properly stowed
     local stow_output exit_code
     cd "$dotfiles_dir" || return 1
     stow_output=$(stow --no --verbose --restow --target="$target" "$package" 2>&1)
     exit_code=$?
-    
+
     # Determine status based on stow output and exit code
     if [[ $exit_code -eq 0 ]]; then
         if [[ -z "$stow_output" ]]; then
@@ -61,25 +65,25 @@ dotfiles_status() {
     echo "🏠 Dotfiles Status"
     echo "=================="
     echo
-    
+
     # System Information
     echo "💻 System Information:"
     echo "   🖥️ Machine: $(whoami)@$(hostname -s)"
     echo "   🌐 Hostname: $(hostname)"
-    echo "   📂 Dotfiles: $HOME/code/src/github.com/ianlivingstone/dotfiles"
+    echo "   📂 Dotfiles: $DOTFILES_ROOT"
     echo "   🐚 Shell: $SHELL ($ZSH_VERSION)"
     echo
-    
+
     # Installation Status
     echo "📁 Installation Status:"
-    
+
     # Load packages from config file and check each one using stow
-    local dotfiles_dir="$HOME/code/src/github.com/ianlivingstone/dotfiles"
+    local dotfiles_dir="$DOTFILES_ROOT"
     local xdg_config_dir="$(get_xdg_config_dir)"
-    
+
     # Set XDG_CONFIG_DIR for use in package config expansion
     export XDG_CONFIG_DIR="$xdg_config_dir"
-    
+
     while IFS= read -r line || [[ -n "$line" ]]; do
         # Skip empty lines and comments
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
@@ -87,7 +91,7 @@ dotfiles_status() {
         check_package_status "$line" "$dotfiles_dir"
     done < "$dotfiles_dir/packages.config"
     echo
-    
+
     # Development Environment
     echo "🛠️  Development Environment:"
 
@@ -122,7 +126,7 @@ dotfiles_status() {
         source "$NVM_DIR/nvm.sh" &>/dev/null
         nvm_loaded=true
     fi
-    
+
     if [[ "$nvm_loaded" == "true" ]]; then
         local node_version=$(node --version 2>/dev/null || echo "none")
         local nvm_version=$(nvm --version 2>/dev/null || echo "unknown")
@@ -132,7 +136,7 @@ dotfiles_status() {
     else
         echo "   ❌ NVM: Not installed"
     fi
-    
+
     # Check if GVM is available (should be loaded by languages.sh module)
     if command -v gvm &>/dev/null && [[ -n "$GVM_ROOT" ]]; then
         local go_version=$(go version 2>/dev/null | awk '{print $3}' || echo "none")
@@ -244,19 +248,19 @@ dotfiles_status() {
     else
         echo "   ❌ Neovim: Not installed"
     fi
-    
+
     if command -v tmux &>/dev/null; then
         echo "   ✅ Tmux: $(tmux -V | awk '{print $2}')"
     else
         echo "   ❌ Tmux: Not installed"
     fi
-    
+
     if command -v starship &>/dev/null; then
         echo "   ✅ Starship: $(starship --version | head -1 | awk '{print $2}')"
     else
         echo "   ❌ Starship: Not installed"
     fi
-    
+
     # Docker
     if command -v docker &>/dev/null; then
         local docker_client_version=$(docker --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
@@ -285,23 +289,23 @@ dotfiles_status() {
         echo "   ❌ Docker: Not installed"
     fi
     echo
-    
+
     # Security & Agents
     echo "🔐 Security & Agents:"
     local xdg_config="$(get_xdg_config_dir)"
-    
+
     # SSH Keys Summary
     if [[ -f "$xdg_config/ssh/machine.config" ]]; then
         local ssh_key_count=$(grep -c "IdentityFile" "$xdg_config/ssh/machine.config" 2>/dev/null | tr -d '\n' || echo "0")
         local encrypted_count=0
-        
+
         while IFS= read -r line; do
             local key_path=$(echo "$line" | awk '{print $2}' | sed "s|~|$HOME|")
             if [[ -f "$key_path" ]] && ! ssh-keygen -y -P "" -f "$key_path" &>/dev/null; then
                 encrypted_count=$((encrypted_count + 1))
             fi
         done < <(grep "IdentityFile" "$xdg_config/ssh/machine.config" 2>/dev/null)
-        
+
         if [[ $ssh_key_count -eq $encrypted_count ]] && [[ $ssh_key_count -gt 0 ]]; then
             echo "   🎯 SSH Keys: $ssh_key_count configured, all encrypted"
         elif [[ $ssh_key_count -gt 0 ]]; then
@@ -312,12 +316,12 @@ dotfiles_status() {
     else
         echo "   ❌ SSH Keys: No configuration found"
     fi
-    
+
     # GPG Key Summary
     if command -v gpg &> /dev/null; then
         # Get the default key directly from GPG
         local selected_key=$(gpg --list-secret-keys --with-colons 2>/dev/null | grep "^sec:" | head -1 | cut -d: -f5)
-        
+
         # If no secret keys, try to get default key from config as fallback
         if [[ -z "$selected_key" ]]; then
             if [[ -f "$xdg_config/gpg/machine.config" ]]; then
@@ -326,7 +330,7 @@ dotfiles_status() {
                 selected_key=$(grep "^default-key" "$HOME/.gnupg/gpg.conf" 2>/dev/null | awk '{print $2}')
             fi
         fi
-        
+
         if [[ -n "$selected_key" ]]; then
             if pgrep -x "gpg-agent" >/dev/null && gpg-connect-agent --quiet /bye &>/dev/null; then
                 echo "   🎯 GPG Key: $selected_key (encrypted, agent running)"
@@ -339,12 +343,12 @@ dotfiles_status() {
     else
         echo "   ❌ GPG: Not available"
     fi
-    
+
     # Agent Status
     if [[ -n "$SSH_AUTH_SOCK" ]] && ssh-add -l &>/dev/null; then
         local key_count=$(ssh-add -l 2>/dev/null | wc -l | xargs)
         echo "   ✅ SSH Agent: Running ($key_count keys loaded)"
-        
+
         # Show loaded SSH keys
         ssh-add -l 2>/dev/null | while read -r line; do
             local key_size=$(echo "$line" | awk '{print $1}')
@@ -356,10 +360,10 @@ dotfiles_status() {
     else
         echo "   ❌ SSH Agent: Not running"
     fi
-    
+
     if pgrep -x "gpg-agent" > /dev/null && gpg-connect-agent --quiet /bye &>/dev/null; then
         echo "   ✅ GPG Agent: Running"
-        
+
         # Show active GPG key from machine config
         if [[ -n "$selected_key" ]]; then
             local key_info=$(gpg --list-keys --keyid-format=short "$selected_key" 2>/dev/null | grep "^uid" | head -1 | sed 's/uid.*] //')
@@ -372,22 +376,22 @@ dotfiles_status() {
     else
         echo "   ❌ GPG Agent: Not running"
     fi
-    
+
     # Connectivity
     if ssh -T git@github.com -o ConnectTimeout=5 -o BatchMode=yes 2>&1 | grep -q "successfully authenticated"; then
         echo "   ✅ GitHub SSH: Connected"
     else
         echo "   ❌ GitHub SSH: Connection failed"
     fi
-    
+
     # Security permissions validation
     validate_security_permissions
-    
+
     # Version requirements validation
     echo
     echo "📋 Version Requirements:"
     validate_tool_versions
-    
+
     echo
     echo "💡 Run './dotfiles.sh help' for management commands"
 }
@@ -396,10 +400,10 @@ dotfiles_status() {
 # Usage: validate_security_permissions [--fix] [--quiet] [--startup]
 validate_security_permissions() {
     local auto_fix=false
-    local quiet=false  
+    local quiet=false
     local startup_mode=false
     local show_header=true
-    
+
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -409,32 +413,32 @@ validate_security_permissions() {
             *) shift ;;
         esac
     done
-    
+
     local security_issues=()
     local fixed_issues=()
     local xdg_config="$(get_xdg_config_dir)"
-    
+
     [[ "$show_header" == "true" ]] && echo "" && echo "🔒 Security Permissions:"
-    
+
     # Define files that should be 600 (user read/write only)
     local secure_files=(
         "$xdg_config/git/machine.config"
-        "$xdg_config/ssh/machine.config" 
+        "$xdg_config/ssh/machine.config"
         "$HOME/.gnupg/gpg.conf"
         "$HOME/.gnupg/gpg-agent.conf"
         "$HOME/.ssh/id_ed25519"
         "$HOME/.ssh/id_rsa"
     )
-    
+
     # Define directories that should be 700 (user access only)
     local secure_dirs=(
         "$HOME/.gnupg"
         "$HOME/.ssh"
         "$xdg_config/ssh"
-        "$xdg_config/git" 
+        "$xdg_config/git"
         "$xdg_config/gpg"
     )
-    
+
     # Check and optionally fix file permissions
     for file in "${secure_files[@]}"; do
         if [[ -f "$file" ]]; then
@@ -452,12 +456,13 @@ validate_security_permissions() {
             fi
         fi
     done
-    
+
     # Check and optionally fix directory permissions
     for dir in "${secure_dirs[@]}"; do
         if [[ -d "$dir" ]]; then
             local perms=$(stat -f %A "$dir" 2>/dev/null || stat -c %a "$dir" 2>/dev/null || echo "unknown")
-            if [[ "$perms" != "700" ]] && [[ "$perms" != "755" ]]; then
+            # These hold keys/identity — require 700; 755 lets other local users traverse them.
+            if [[ "$perms" != "700" ]]; then
                 if [[ "$auto_fix" == "true" ]]; then
                     if chmod 700 "$dir" 2>/dev/null; then
                         fixed_issues+=("$dir ($perms → 700)")
@@ -470,7 +475,7 @@ validate_security_permissions() {
             fi
         fi
     done
-    
+
     # Check and optionally fix SSH key permissions specifically
     for key in ~/.ssh/id_*; do
         if [[ -f "$key" ]] && [[ "$key" != *.pub ]]; then
@@ -488,7 +493,7 @@ validate_security_permissions() {
             fi
         fi
     done
-    
+
     # Check and fix only managed ~/.config subdirectories to be user-only accessible
     local managed_config_dirs=("$HOME/.config/git" "$HOME/.config/ssh" "$HOME/.config/gpg" "$HOME/.config/nvim")
     for config_dir in "${managed_config_dirs[@]}"; do
@@ -507,7 +512,7 @@ validate_security_permissions() {
             fi
         fi
     done
-    
+
     # Output results based on mode
     if [[ "$quiet" == "false" ]]; then
         if [[ ${#fixed_issues[@]} -gt 0 ]]; then
@@ -518,7 +523,7 @@ validate_security_permissions() {
                 done
             fi
         fi
-        
+
         if [[ ${#security_issues[@]} -eq 0 ]] && [[ ${#fixed_issues[@]} -eq 0 ]]; then
             echo "   ✅ All security-sensitive files have proper permissions"
         elif [[ ${#security_issues[@]} -gt 0 ]]; then
@@ -544,7 +549,7 @@ fix_security_permissions() {
     validate_security_permissions --fix
 }
 
-# Quick security check that runs on shell startup  
+# Quick security check that runs on shell startup
 # Warns about critical security issues but does NOT fix them automatically
 quick_security_check() {
     validate_security_permissions --startup
@@ -612,21 +617,21 @@ _clear_caches() {
 
 # Version validation function
 validate_tool_versions() {
-    local versions_file="$HOME/code/src/github.com/ianlivingstone/dotfiles/versions.config"
+    local versions_file="$DOTFILES_ROOT/versions.config"
     local issues=()
-    
+
     if [[ ! -f "$versions_file" ]]; then
         return 0
     fi
-    
+
     while IFS=':' read -r tool min_version; do
         # Skip comments and empty lines
         [[ -z "$tool" || "$tool" =~ ^[[:space:]]*# ]] && continue
-        
+
         # Trim whitespace
         tool=$(echo "$tool" | xargs)
         min_version=$(echo "$min_version" | xargs)
-        
+
         if command -v "$tool" &>/dev/null; then
             local current_version=""
             case "$tool" in
@@ -700,18 +705,18 @@ validate_tool_versions() {
                     fi
                     ;;
             esac
-            
+
             if [[ -n "$current_version" ]]; then
                 # Normalize versions for comparison (remove prefixes for comparison only)
                 local current_clean="$current_version"
                 local min_clean="$min_version"
-                
+
                 # Remove common prefixes for comparison
                 current_clean="${current_clean#v}"
                 current_clean="${current_clean#go}"
                 min_clean="${min_clean#v}"
                 min_clean="${min_clean#go}"
-                
+
                 # Simple version comparison (works for major.minor.patch)
                 if ! printf '%s\n%s\n' "$min_clean" "$current_clean" | sort -V | head -1 | grep -q "^$min_clean$"; then
                     issues+=("$tool: $current_version < $min_version (required)")
@@ -719,7 +724,7 @@ validate_tool_versions() {
             fi
         fi
     done < "$versions_file"
-    
+
     if [[ ${#issues[@]} -gt 0 ]]; then
         echo "   ⚠️  Version issues found:"
         for issue in "${issues[@]}"; do
@@ -733,7 +738,7 @@ validate_tool_versions() {
 }
 
 # Simple alias to dotfiles.sh script (now handles caching internally)
-alias dotfiles="$HOME/code/src/github.com/ianlivingstone/dotfiles/dotfiles.sh"
+alias dotfiles="$DOTFILES_ROOT/dotfiles.sh"
 
 # Legacy aliases for backward compatibility
 security_status() {

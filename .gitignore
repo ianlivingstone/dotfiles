@@ -28,3 +28,23 @@ nvim/.config/nvim/*.backup
 **/machine.config
 **/machines/
 .claude/hook-output.log
+
+# Secrets / keys / credentials — never commit these (defense against an accidental `git add .`)
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+id_ecdsa
+id_dsa
+*.id_rsa
+credentials
+.netrc
+.gnupg/
+**/.gnupg/
+known_hosts
+authorized_keys

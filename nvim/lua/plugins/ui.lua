@@ -18,10 +18,14 @@ M.plugins = {
         vim.notify("Failed to load lualine", vim.log.levels.ERROR)
         return
       end
-      
+
       lualine.setup({
         options = {
-          theme = "catppuccin",
+          -- "auto" follows vim.g.colors_name (set to catppuccin-mocha in
+          -- colorscheme.lua). Newer catppuccin renamed its lualine theme from
+          -- "catppuccin" to per-flavor files (catppuccin-mocha) + "catppuccin-nvim",
+          -- so the old literal "catppuccin" no longer resolves.
+          theme = "auto",
           component_separators = { left = "", right = "" },
           section_separators = { left = "", right = "" },
         },
@@ -39,7 +43,7 @@ M.plugins = {
         vim.notify("Failed to load gitsigns", vim.log.levels.ERROR)
         return
       end
-      
+
       gitsigns.setup({
         signs = {
           add = { text = "+" },

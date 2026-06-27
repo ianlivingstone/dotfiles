@@ -1251,8 +1251,13 @@ set_version_pin() {
     local tool="$1" ver="$2"
     local versions_file="$DOTFILES_DIR/versions.config"
     [[ -z "$ver" ]] && return 0
+    # Escape sed metacharacters defensively (tool/ver come from a fixed list, but never
+    # feed unescaped data into a sed pattern/replacement).
+    local tool_re ver_rep
+    tool_re=$(printf '%s' "$tool" | sed 's/[.[*^$/]/\\&/g')
+    ver_rep=$(printf '%s' "$ver" | sed 's/[&/|]/\\&/g')
     if grep -qE "^${tool}:" "$versions_file" 2>/dev/null; then
-        sed -i '' "s|^${tool}:.*|${tool}:${ver}|" "$versions_file"
+        sed -i '' "s|^${tool_re}:.*|${tool}:${ver_rep}|" "$versions_file"
     else
         printf '%s:%s\n' "$tool" "$ver" >> "$versions_file"
     fi

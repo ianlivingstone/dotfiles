@@ -8,11 +8,10 @@
 # Usage: Run 'jj git init --colocate' in existing git repos or just use 'jj'
 # commands directly - jj will detect and work with the git repo.
 
-[user]
-# User identity for commits
-# These will be read from git config if not set here
-name = "Ian Livingstone"
-email = "ian@keycard.ai"
+# NOTE: user identity (name/email) is intentionally NOT here — it's personal data and
+# would be committed to this shared repo. It lives in a machine-local, gitignored file
+# (~/.config/jj/identity.local.toml), merged in because shell/jj.sh sets JJ_CONFIG to
+# the config directory. See shell/jj.sh.
 
 [ui]
 # Use delta for diff viewing (if available, fallback to less)

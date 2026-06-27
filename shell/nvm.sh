@@ -47,18 +47,18 @@ load_nvm() {
     if [[ -s "$NVM_DIR/nvm.sh" ]]; then
         # Set guard immediately before sourcing to prevent race condition loops
         export DOTFILES_NVM_LOADED=1
-        
+
         # Source NVM exactly once using the dynamic directory configuration
         source "$NVM_DIR/nvm.sh"
-        
+
         # Load bash completion from dynamic directory path
         if [[ -s "$NVM_DIR/bash_completion" ]]; then
             source "$NVM_DIR/bash_completion"
         fi
-        
+
         # Clean up wrapper functions for binaries, but leave 'nvm' alive as a functional reference
         unset -f node npm npx corepack yarn pnpm 2>/dev/null
-        
+
         return 0
     fi
     return 1
@@ -85,20 +85,20 @@ _init_dotfiles_nvm() {
             # No wrapper functions needed — this removes the slow-first-command stall.
             add_to_path "$NVM_DIR/versions/node/$NODE_VERSION/bin"
         fi
-        
+
         # Check if default alias matches configured version safely using scoped variables
         local current_default
         current_default=$(cat "$NVM_DIR/alias/default" 2>/dev/null || echo "none")
         if [[ "$current_default" != "$NODE_VERSION" ]]; then
             show_warning "Default Node.js version is $current_default, expected $NODE_VERSION"
         fi
-        
+
     elif [[ -d "$NVM_DIR" ]]; then
         # NVM directory exists but nvm.sh is missing - corrupted installation
         echo "⚠️  NVM directory found at $NVM_DIR but nvm.sh is missing. Please reinstall NVM."
     else
         # NVM not installed - Verified environment string alignment for shell installation pipes
-        echo "❌ NVM not found at $NVM_DIR. Install with: export NVM_DIR=\"$NVM_DIR\" && curl --proto '=https' --tlsv1.2 -o- -sSfL https://githubusercontent.com | bash"
+        echo "❌ NVM not found at $NVM_DIR. Install with: export NVM_DIR=\"$NVM_DIR\" && curl --proto '=https' --tlsv1.2 -o- -sSfL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash"
     fi
 }
 

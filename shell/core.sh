@@ -27,10 +27,11 @@ done
 if [[ -n "$brew_bin" ]]; then
     local brew_cache="${XDG_CACHE_HOME}/dotfiles/brew_shellenv.zsh"
     if [[ ! -s "$brew_cache" || "$brew_bin" -nt "$brew_cache" ]]; then
-        mkdir -p "${brew_cache:h}"
-        # Write atomically: a partial/failed shellenv must never be sourced.
+        mkdir -p "${brew_cache:h}" && chmod 700 "${brew_cache:h}"
+        # Write atomically (a partial/failed shellenv must never be sourced) and as 0600
+        # (umask 077) — this file is sourced at startup, so keep it owner-only.
         local brew_tmp="${brew_cache}.$$"
-        if "$brew_bin" shellenv > "$brew_tmp" 2>/dev/null && [[ -s "$brew_tmp" ]]; then
+        if ( umask 077; "$brew_bin" shellenv > "$brew_tmp" 2>/dev/null ) && [[ -s "$brew_tmp" ]]; then
             mv -f "$brew_tmp" "$brew_cache"
         else
             rm -f "$brew_tmp"
@@ -62,7 +63,7 @@ unsetopt EXTENDEDGLOB
 # "tab completion is slow sometimes". The rest are quality-of-life: an arrow-key
 # menu and case-insensitive matching.
 local zcompcache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompcache"
-mkdir -p "$zcompcache"
+mkdir -p "$zcompcache" && chmod 700 "$zcompcache"
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "$zcompcache"
 zstyle ':completion:*' menu select

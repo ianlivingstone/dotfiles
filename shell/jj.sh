@@ -2,6 +2,12 @@
 # Jujutsu (jj) integration and helper functions
 # SOURCED MODULE: Uses graceful error handling, never use set -e
 
+# Point jj at the whole config DIRECTORY (not just config.toml) so it merges the shared,
+# committed config.toml with a machine-local identity file (identity.local.toml) that is
+# NOT in the repo. Keeps personal name/email out of shared source — the same separation
+# git uses with machine.config.
+export JJ_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/jj"
+
 # Check if current directory is a jj repository (colocated with git)
 is_jj_repo() {
     # Check for jj working copy metadata in .git/jj/

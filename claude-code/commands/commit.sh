@@ -334,9 +334,9 @@ display_commit_context() {
 
 # Function to generate unique commit message filename
 generate_commit_filename() {
-    # Use base64 encoded random data for uniqueness
-    local random_id=$(head -c 12 /dev/urandom | base64 | tr -d '/+=' | head -c 16)
-    echo "/tmp/commit-msg-${random_id}.txt"
+    # Atomically create a 0600 temp file via mktemp — avoids predictable-path /
+    # symlink-race issues in the world-writable /tmp.
+    mktemp "${TMPDIR:-/tmp}/commit-msg-XXXXXXXX.txt"
 }
 
 # Function to generate commit message using Claude

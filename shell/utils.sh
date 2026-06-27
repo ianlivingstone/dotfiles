@@ -14,13 +14,13 @@ get_xdg_config_dir() {
 # If script_path is not provided, uses the calling script's path
 get_shell_dir() {
     local script_path="${1:-${(%):-%N}}"
-    
+
     # If SHELL_DIR is already set (from .zshrc), use it
     if [[ -n "$SHELL_DIR" ]]; then
         echo "$SHELL_DIR"
         return 0
     fi
-    
+
     # Resolve symlinks to get the real path
     if [[ -L "$script_path" ]]; then
         local target="$(readlink "$script_path")"
@@ -31,7 +31,7 @@ get_shell_dir() {
             script_path="$target"
         fi
     fi
-    
+
     # Get the directory containing the script
     cd "$(dirname "$script_path")" && pwd
 }
@@ -40,13 +40,14 @@ get_shell_dir() {
 # Usage: load_config config_file variable_name fallback_value
 load_config() {
     local config_file="$1"
-    local var_name="$2" 
+    local var_name="$2"
     local fallback="$3"
-    
+
     if [[ -f "$config_file" ]]; then
         source "$config_file"
     else
-        eval "$var_name=\"$fallback\""
+        # Assign by name without eval (no code-injection vector if inputs are ever external).
+        printf -v "$var_name" '%s' "$fallback"
     fi
 }
 
@@ -69,19 +70,19 @@ show_warning() {
 get_version_requirement() {
     local tool="$1"
     local versions_file="$HOME/code/src/github.com/ianlivingstone/dotfiles/versions.config"
-    
+
     if [[ ! -f "$versions_file" ]]; then
         return 1
     fi
-    
+
     # Look for the tool in versions.config
     local version=$(grep "^${tool}:" "$versions_file" 2>/dev/null | cut -d':' -f2 | xargs)
-    
+
     if [[ -n "$version" ]]; then
         echo "$version"
         return 0
     fi
-    
+
     return 1
 }
 
@@ -160,14 +161,14 @@ install_npm_globals() {
 is_macos_laptop() {
     # Check if we're on macOS
     [[ "$(uname -s)" != "Darwin" ]] && return 1
-    
+
     # Check if system has battery using pmset
     local battery_info
     battery_info=$(pmset -g batt 2>/dev/null) || return 1
-    
+
     # Look for "InternalBattery" or "Battery" in output
     [[ "$battery_info" =~ (InternalBattery|Battery) ]] && return 0
-    
+
     return 1
 }
 
@@ -176,14 +177,14 @@ is_macos_laptop() {
 get_battery_status() {
     # Only run on macOS laptops
     is_macos_laptop || return 1
-    
+
     # Cache variables
     local cache_file="$HOME/.cache/dotfiles_battery_cache"
     local cache_duration=30
-    
+
     # Create cache directory if it doesn't exist
     mkdir -p "$(dirname "$cache_file")"
-    
+
     # Check if cache is valid (less than 30 seconds old)
     if [[ -f "$cache_file" ]]; then
         local cache_age=$(($(date +%s) - $(stat -f %m "$cache_file" 2>/dev/null || echo 0)))
@@ -192,36 +193,36 @@ get_battery_status() {
             return 0
         fi
     fi
-    
+
     # Get fresh battery info
     local battery_info
     battery_info=$(pmset -g batt 2>/dev/null) || return 1
-    
+
     # Parse battery percentage and status
     local percentage
     local battery_status
     local time_remaining
-    
+
     # Extract percentage
     if [[ "$battery_info" =~ ([0-9]+)% ]]; then
         percentage="${match[1]}"
     else
         return 1
     fi
-    
+
     # Extract status
     if [[ "$battery_info" =~ (charging|discharging|charged|AC\ attached) ]]; then
         battery_status="${match[1]}"
     else
         battery_status="unknown"
     fi
-    
+
     # Extract time remaining (optional)
     time_remaining=""
     if [[ "$battery_info" =~ ([0-9]+:[0-9]+)\ remaining ]]; then
         time_remaining="${match[1]}"
     fi
-    
+
     # Format output with appropriate emoji
     local battery_display
     if [[ "$battery_status" =~ ^(charging|AC\ attached)$ ]]; then
@@ -233,12 +234,12 @@ get_battery_status() {
     else
         battery_display="🔋 ${percentage}%"
     fi
-    
+
     # Add time remaining if available and not "0:00"
     if [[ -n "$time_remaining" && "$time_remaining" != "0:00" ]]; then
         battery_display="${battery_display} (${time_remaining})"
     fi
-    
+
     # Cache the result
     echo "$battery_display" > "$cache_file"
     echo "$battery_display"
@@ -248,15 +249,15 @@ get_battery_status() {
 # Usage: is_ssh_key_encrypted /path/to/key
 is_ssh_key_encrypted() {
     local key_path="$1"
-    
+
     [[ ! -f "$key_path" ]] && return 1
     [[ "$key_path" == *.pub ]] && return 1  # Skip public keys
-    
+
     # Check if key file contains encryption headers
     if grep -q "ENCRYPTED\|Proc-Type.*ENCRYPTED" "$key_path" 2>/dev/null; then
         return 0  # Encrypted
     fi
-    
+
     # For OpenSSH format, check if it contains bcrypt/aes markers
     if grep -q "openssh-key-v1" "$key_path" 2>/dev/null; then
         # Try to detect encryption by looking for key material patterns
@@ -265,7 +266,7 @@ is_ssh_key_encrypted() {
             return 0  # Likely encrypted
         fi
     fi
-    
+
     return 1  # Not encrypted
 }
 
@@ -273,14 +274,14 @@ is_ssh_key_encrypted() {
 # Usage: is_ssh_key_loaded /path/to/key
 is_ssh_key_loaded() {
     local key_path="$1"
-    
+
     # Check if SSH agent is running
     [[ -z "$SSH_AUTH_SOCK" ]] && return 1
-    
+
     # Get public key fingerprint
     local fingerprint
     fingerprint=$(ssh-keygen -lf "$key_path" 2>/dev/null | awk '{print $2}') || return 1
-    
+
     # Check if fingerprint is in loaded keys
     ssh-add -l 2>/dev/null | grep -q "$fingerprint"
 }
@@ -289,19 +290,19 @@ is_ssh_key_loaded() {
 # Usage: add_ssh_key_to_keychain /path/to/key
 add_ssh_key_to_keychain() {
     local key_path="$1"
-    
+
     [[ ! -f "$key_path" ]] && return 1
     [[ "$key_path" == *.pub ]] && return 1  # Skip public keys
-    
+
     # Only add if key is encrypted
     if ! is_ssh_key_encrypted "$key_path"; then
         echo "⚠️  Key $key_path is not encrypted, skipping keychain integration"
         return 1
     fi
-    
+
     echo "🔐 Adding SSH key to macOS Keychain: $(basename "$key_path")"
     echo "💡 You'll be prompted for your SSH key passphrase once to save it to Keychain"
-    
+
     # Add to agent and keychain
     if ssh-add --apple-use-keychain "$key_path"; then
         echo "✅ SSH key added to Keychain successfully"
@@ -313,15 +314,15 @@ add_ssh_key_to_keychain() {
 }
 
 # Remove SSH key from macOS Keychain
-# Usage: remove_ssh_key_from_keychain /path/to/key  
+# Usage: remove_ssh_key_from_keychain /path/to/key
 remove_ssh_key_from_keychain() {
     local key_path="$1"
-    
+
     [[ ! -f "$key_path" ]] && return 1
     [[ "$key_path" == *.pub ]] && return 1  # Skip public keys
-    
+
     echo "🗑️  Removing SSH key from Keychain: $(basename "$key_path")"
-    
+
     # Remove from agent (also removes from keychain)
     if ssh-add -d "$key_path" 2>/dev/null; then
         echo "✅ SSH key removed from Keychain successfully"

@@ -19,8 +19,11 @@ else
     echo "⚠️  GVM module not found at: $SHELL_DIR/gvm.sh"
 fi
 
-# Additional Go configuration
-export GOPRIVATE=github.com/keycardlabs
+# Machine/org-specific shell env (e.g. GOPRIVATE for private Go modules) lives outside
+# the repo so org names / private hosts aren't committed to a shareable dotfiles repo.
+# Put `export GOPRIVATE=...` etc. in this gitignored, machine-local file:
+[[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/shell/machine.env" ]] && \
+    source "${XDG_CONFIG_HOME:-$HOME/.config}/shell/machine.env"
 
 # Setup Node.js/NVM (using dedicated nvm module)
 if [[ -f "$SHELL_DIR/nvm.sh" ]]; then
