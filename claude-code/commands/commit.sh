@@ -355,54 +355,51 @@ generate_commit_message_ai() {
         get_staged_diff
     } > "$temp_context"
 
-    # Call Claude to generate commit message using --print mode
-    # CRITICAL: Request raw output only, no markdown, no explanation
-    local raw_response=$(claude -p "Generate a git commit message based on the context below.
+    # Ask Claude for ONLY the subject + body. The trailer is appended by this script
+    # (below), so the model never writes it — that guarantees a clean, correct footer.
+    local prompt="Generate a git commit message: a subject line, then optionally a blank line and a body.
 
-CRITICAL INSTRUCTIONS:
-- Output ONLY the raw commit message text
-- NO markdown code blocks, NO backticks, NO explanation text
-- NO 'Here is the commit message:' or similar preamble
-- Just the commit message itself, ready to paste into git commit
+OUTPUT RULES (strict):
+- Output ONLY the commit message — no preamble, no explanation, no markdown, no code fences.
+- Do NOT write any footer/trailer (no 'Generated with…', no 'Co-Authored-By…'); the tooling adds those.
 
-Follow these commit message rules:
+STYLE:
+- Subject: imperative mood, 50-72 chars, specific, no trailing period.
+- Body (optional): explain WHY (not what), wrapped ~72 cols, after one blank line.
+- Match the style of recent commits.
 
-**Subject Line:**
-- Max 50-72 characters
-- Imperative mood: 'Add feature' not 'Added feature'
-- Start with verb: Add, Fix, Update, Remove, Refactor, etc.
-- Be specific: 'Add gopls config' not 'Update files'
-- No period at end
-
-**Body (optional):**
-- Explain WHY, not what (diff shows what)
-- Wrap at 72 characters
-- Blank line after subject
-
-**Footer (REQUIRED - must be included):**
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-
-Match the style of recent commits. Here's the context:
-
-$(cat "$temp_context")")
-
+CONTEXT:
+$(cat "$temp_context")"
     rm -f "$temp_context"
 
-    # Extract commit message from response (handles markdown-wrapped or raw text)
-    local commit_msg="$raw_response"
-
-    # If response contains markdown code blocks, extract the content
-    if echo "$raw_response" | grep -q '```'; then
-        # Extract text between first ``` and last ```
-        commit_msg=$(echo "$raw_response" | sed -n '/```/,/```/p' | sed '1d;$d' | sed '/^```/d')
+    # Extract the model's text via JSON (--output-format json + jq .result). This is
+    # immune to ANSI colors, spinner frames, and streaming artifacts that scraping plain
+    # stdout can capture. Fall back to plain -p only if jq/JSON is unavailable.
+    local raw=""
+    if command -v jq >/dev/null 2>&1; then
+        raw=$(claude -p --output-format json "$prompt" 2>/dev/null | jq -r '.result // empty' 2>/dev/null)
     fi
+    [[ -z "$raw" ]] && raw=$(claude -p "$prompt" 2>/dev/null)
 
-    # Remove any leading/trailing whitespace
-    commit_msg=$(echo "$commit_msg" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    # Sanitize: drop code-fence lines and any trailer the model emitted anyway (we re-add
+    # the canonical one below), then trim leading/trailing blank lines.
+    local body
+    body=$(printf '%s\n' "$raw" | awk '
+        /^[[:space:]]*```/ { next }
+        /Generated with \[Claude Code\]/ { next }
+        tolower($0) ~ /^co-authored-by:[[:space:]]*claude/ { next }
+        { sub(/[[:space:]]+$/, ""); a[++n] = $0 }
+        END { s=1; while (s<=n && a[s]=="") s++; e=n; while (e>=s && a[e]=="") e--; for (i=s; i<=e; i++) print a[i] }
+    ')
 
-    echo "$commit_msg"
+    # Drop a single leading preamble line if the model added one despite instructions.
+    case "${body%%$'\n'*}" in
+        [Hh]ere\ is*|[Hh]ere\'s*|[Ss]ure*|[Cc]ertainly*|[Oo]kay*|"The commit message"*)
+            body=$(printf '%s\n' "$body" | awk 'NR==1 {next} {print}' | awk 'NF {f=1} f') ;;
+    esac
+
+    # Emit: sanitized subject+body + the canonical, tooling-owned trailer (single source of truth).
+    printf '%s\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n' "$body"
 }
 
 # AI commit workflow
@@ -430,6 +427,13 @@ ai_commit() {
     # Step 3: Generate commit message with AI
     echo -e "${CYAN}📝 Generating commit message with Claude...${NC}"
     local commit_msg=$(generate_commit_message_ai)
+
+    # Abort if the subject line is empty/whitespace (e.g. Claude returned nothing) —
+    # never create a commit with a blank header.
+    if [[ -z "$(printf '%s' "$commit_msg" | head -1 | tr -d '[:space:]')" ]]; then
+        echo -e "${RED}❌ Generated commit message has no subject line — aborting${NC}" >&2
+        exit 1
+    fi
 
     # Step 4: Show message
     echo ""
