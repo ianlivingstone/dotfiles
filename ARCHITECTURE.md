@@ -20,7 +20,7 @@ For detailed architecture of specific components, see the `AGENTS.md` files in e
 
 ### 3. **Native Tool Configuration**
 - Use Git's native `[include]` for layered configuration
-- Use SSH's native `Include` for layered configuration  
+- Use SSH's native `Include` for layered configuration
 - Avoid shell scripting where native tools provide better solutions
 
 ### 4. **Security by Default**
@@ -31,7 +31,7 @@ For detailed architecture of specific components, see the `AGENTS.md` files in e
 
 ### 5. **Developer Experience First**
 - Single command installation: `./dotfiles.sh install`
-- Interactive setup with clear guidance  
+- Interactive setup with clear guidance
 - Fail fast with helpful error messages
 - Re-runnable installation for reconfiguration
 
@@ -50,11 +50,6 @@ dotfiles/                           # Git repository (shareable)
 ├── nvim/                          # Neovim configuration
 │   └── AGENTS.md                   # Neovim architecture documentation
 ├── misc/                          # Starship prompt, colors
-├── claude_hooks/                  # Claude Code integration hooks
-│   ├── bin/                       # Compiled hook binaries
-│   ├── hooks/                     # Individual hook source code  
-│   │   └── whitespace-cleaner/    # Whitespace cleanup hook
-│   └── build-hooks.sh             # Hook build script
 ├── packages.config                # Package list for GNU Stow
 ├── versions.config                # Centralized version requirements
 ├── dotfiles.sh                    # Installation & management script
@@ -79,7 +74,7 @@ dotfiles/                           # Git repository (shareable)
 ### Version Management
 All tool version requirements are centralized in `versions.config`:
 - **Status checking**: `./dotfiles.sh status` validates all tools meet minimum versions
-- **Automatic updates**: `./dotfiles.sh update` installs/updates language versions  
+- **Automatic updates**: `./dotfiles.sh update` installs/updates language versions
 - **Team consistency**: Requirements shared via git, ensuring consistent environments
 - **Flexible comparison**: Handles version prefixes (v24.1.0, go1.24.1) properly
 
@@ -95,7 +90,7 @@ All tool version requirements are centralized in `versions.config`:
 The dotfiles system uses a **configuration-driven package approach**:
 
 1. **`packages.config`** - Single source of truth for all packages
-2. **Package directories** - Self-contained tool configurations  
+2. **Package directories** - Self-contained tool configurations
 3. **GNU Stow** - Symlink management for installation
 4. **Stow-based validation** - Status checking using Stow's own logic
 
@@ -123,7 +118,7 @@ Each major component has detailed architecture documentation in its respective `
 - Version manager integration (NVM, GVM, Rustup)
 - Security validation and agent management
 
-### 📁 **[nvim/AGENTS.md](nvim/AGENTS.md)**  
+### 📁 **[nvim/AGENTS.md](nvim/AGENTS.md)**
 - Lazy-loaded plugin architecture
 - Language Server Protocol integration
 - Modular configuration with graceful degradation
@@ -169,7 +164,7 @@ The installer validates and guides installation of all required tools:
 ./dotfiles.sh install      # Install/configure dotfiles (interactive)
 ./dotfiles.sh status       # Check installation status and version compliance
 ./dotfiles.sh update       # Update Node.js, Go versions from versions.config
-./dotfiles.sh uninstall    # Remove all dotfiles symlinks  
+./dotfiles.sh uninstall    # Remove all dotfiles symlinks
 ./dotfiles.sh help         # Show all available commands
 ```
 
@@ -224,7 +219,7 @@ Work Laptop:
 - Same editor, shell, and tool configurations
 
 Personal Laptop:
-- Git: personal@gmail.com + personal GPG key  
+- Git: personal@gmail.com + personal GPG key
 - SSH: Personal GitHub keys + server keys
 - Identical tool configurations and versions
 ```

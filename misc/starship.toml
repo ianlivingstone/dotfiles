@@ -1,8 +1,9 @@
 # Starship configuration focused on language versions
 # System info is handled by shell startup message
 
-# Global timeout setting
-command_timeout = 1000
+# Global timeout setting — cap how long the prompt can block on a module command
+# (e.g. git status). If git is slow, starship shows partial info instead of hanging.
+command_timeout = 500
 
 format = """
 $directory\

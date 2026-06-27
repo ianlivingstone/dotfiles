@@ -33,7 +33,8 @@ the exact command to install it.
 
 ```bash
 ./dotfiles.sh status      # is everything installed and up to date?
-./dotfiles.sh update      # update language versions + Homebrew packages
+./dotfiles.sh update      # converge tools to PINNED versions (versions.config + Brewfile)
+./dotfiles.sh upgrade     # upgrade everything to LATEST + rewrite versions.config pins
 ./dotfiles.sh reinstall   # re-link after changing configs
 ./dotfiles.sh uninstall   # remove all symlinks
 ./dotfiles.sh help        # list commands

@@ -11,6 +11,12 @@ export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 # General Config
 export GPG_TTY=$(tty)
 
+# Pager: enable mouse-wheel scrolling in less (git diff, git add -p, man, etc.).
+#   -F quit if it fits one screen, -R keep colors, --mouse wheel scroll (less 550+),
+#   --wheel-lines=3 for smoother scrolling. (Replaces git's default LESS=FRX; we drop
+#   -X because it interferes with the alt-screen that mouse reporting needs.)
+export LESS="-FR --mouse --wheel-lines=3"
+
 # Homebrew environment — cache `brew shellenv` output instead of forking brew on
 # every shell. Regenerate only when the brew binary is newer than the cache.
 local brew_bin=""

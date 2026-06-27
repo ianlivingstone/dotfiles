@@ -246,16 +246,18 @@ go version      # Should match versions.config
 
 ## Claude Hooks Testing
 
-### Test hook build status
+Hooks are `PostToolUse` command hooks in `.claude/settings.json` (no build step).
+
+### Test a hook
 ```bash
-# Check hooks built
-./dotfiles.sh status  # Should show hooks status
+# Edit a file, then check the log for the hook's output
+/show-hook-log                         # or: tail ~/.claude/hook-output.log
 
-# Rebuild hooks
-./claude_hooks/build-hooks.sh
+# Verify: trailing whitespace should be stripped; *.sh/*.zsh syntax-checked (zsh -n)
 
-# Verify hooks work
-# Edit a file, whitespace should be cleaned
+# Pipe-test a hook command directly with a synthetic payload:
+echo '{"tool_input":{"file_path":"shell/core.sh"}}' \
+  | bash -c "$(jq -r '.hooks.PostToolUse[1].hooks[0].command' .claude/settings.json)"
 ```
 
 ## Common Testing Scenarios

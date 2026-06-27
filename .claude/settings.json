@@ -10,7 +10,6 @@
       "Bash(~/.claude/commands/:*)",
       "Bash(./dotfiles.sh status:*)",
       "Bash(./dotfiles.sh help:*)",
-      "Bash(./claude_hooks/build-hooks.sh:*)",
       "Bash(shellcheck:*)",
       "Bash(gpg --list-keys:*)",
       "Bash(gpg --list-secret-keys:*)",
@@ -57,28 +56,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{ echo \"[$(date '+%Y-%m-%d %H:%M:%S')] whitespace-cleaner\"; echo \"  File: $FILE_PATH\"; claude_hooks/bin/whitespace-cleaner 2>&1 | sed 's/^/  /'; echo \"\"; } | tee -a ~/.claude/hook-output.log | tail -4",
-            "description": "Process file writes and remove trailing whitespace"
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); { echo \"[$(date '+%Y-%m-%d %H:%M:%S')] whitespace-cleaner\"; echo \"  File: ${f:-<none>}\"; if [ -n \"$f\" ] && [ -f \"$f\" ]; then sed -i '' 's/[[:space:]]*$//' \"$f\" && echo '  🧹 trailing whitespace stripped'; else echo '  (no file path)'; fi; echo \"\"; } | tee -a ~/.claude/hook-output.log | tail -4",
+            "description": "Strip trailing whitespace from the written/edited file"
           }
         ]
       },
       {
-        "matcher": "Write|Edit.*\\.sh$",
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "{ echo \"[$(date '+%Y-%m-%d %H:%M:%S')] shellcheck\"; echo \"  File: $FILE_PATH\"; if command -v shellcheck >/dev/null; then shellcheck -x \"$FILE_PATH\" 2>&1 | head -20 | sed 's/^/  /'; else echo '  ⚠️  shellcheck not available'; fi; echo \"\"; } | tee -a ~/.claude/hook-output.log | tail -10",
-            "description": "Lint shell scripts with shellcheck"
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); case \"$f\" in *.sh|*.zsh) { echo \"[$(date '+%Y-%m-%d %H:%M:%S')] zsh -n\"; echo \"  File: $f\"; if out=$(zsh -n \"$f\" 2>&1); then echo '  ✓ syntax OK'; else echo \"$out\" | sed 's/^/  ✗ /'; fi; echo \"\"; } | tee -a ~/.claude/hook-output.log | tail -10 ;; esac",
+            "description": "Syntax-check shell scripts with zsh -n (shellcheck does not support zsh)"
           }
         ]
       },
       {
-        "matcher": "Write|Edit.*AGENTS\\.md$",
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "{ echo \"[$(date '+%Y-%m-%d %H:%M:%S')] validate-agent-rules\"; echo \"  File: $FILE_PATH\"; if [ -f .claude/commands/validate-agent-rules.sh ]; then .claude/commands/validate-agent-rules.sh \"$FILE_PATH\" 2>&1 | sed 's/^/  /'; else echo '  ⚠️  Agent Rules validator not available'; fi; echo \"\"; } | tee -a ~/.claude/hook-output.log | tail -10",
-            "description": "Validate Agent Rules compliance"
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); case \"$f\" in */AGENTS.md|AGENTS.md) { echo \"[$(date '+%Y-%m-%d %H:%M:%S')] validate-agent-rules\"; echo \"  File: $f\"; if [ -x .claude/commands/validate-agent-rules.sh ]; then .claude/commands/validate-agent-rules.sh \"$f\" 2>&1 | sed 's/^/  /'; else echo '  ⚠️  validator not available'; fi; echo \"\"; } | tee -a ~/.claude/hook-output.log | tail -10 ;; esac",
+            "description": "Validate AGENTS.md against the Agent Rules spec"
           }
         ]
       }

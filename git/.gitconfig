@@ -44,6 +44,11 @@
 [core]
     editor = nvim
     autocrlf = input
+    # Keep `git status` fast in large repos (and thus the shell prompt snappy):
+    # fsmonitor runs a background daemon that tracks changes; untrackedCache
+    # caches the untracked-file scan.
+    fsmonitor = true
+    untrackedCache = true
 
 # URL overwrites for GitHub
 [url "git@github.com:"]

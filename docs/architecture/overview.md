@@ -64,7 +64,7 @@ This document provides a high-level summary of the dotfiles system architecture.
 - **Details:** docs/development/version-management.md
 
 ### Claude Code Integration
-- **Location:** .claude/, claude_hooks/
+- **Location:** .claude/
 - **Purpose:** AI assistant configuration
 - **Integration:** Custom hooks, sub-agents
 - **Details:** docs/development/claude-code-integration.md

@@ -46,7 +46,7 @@ These commands only work in this repository and are not stowed globally. They pr
 
 **What it shows:**
 - Timestamps of hook executions
-- Which hook ran (whitespace-cleaner, shellcheck, validate-agent-rules)
+- Which hook ran (whitespace-cleaner, zsh -n, validate-agent-rules)
 - File paths processed
 - Hook output and status
 

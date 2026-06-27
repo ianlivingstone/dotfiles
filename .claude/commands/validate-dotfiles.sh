@@ -75,13 +75,12 @@ else
 fi
 echo ""
 
-# Check 3: Hook Build Status
-echo_info "3/6" "Checking hook build status..."
-if [ -d "claude_hooks/bin" ] && [ -n "$(ls -A claude_hooks/bin 2>/dev/null)" ]; then
-    echo_pass "Hooks are built"
+# Check 3: Claude Code hooks configured
+echo_info "3/6" "Checking Claude Code hooks..."
+if [ -f ".claude/settings.json" ] && grep -q '"PostToolUse"' .claude/settings.json; then
+    echo_pass "PostToolUse hooks configured in .claude/settings.json"
 else
-    echo_warn "Hooks not built"
-    add_recommendation "Run: ./claude_hooks/build-hooks.sh"
+    echo_warn "No PostToolUse hooks found in .claude/settings.json"
 fi
 echo ""
 

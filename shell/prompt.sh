@@ -59,6 +59,14 @@ fi
 
 # Show status on new interactive shell
 if [[ $- == *i* ]]; then
+    # If we're in a git repo, warm `git status` in the background now (disowned, no
+    # output) so the fsmonitor daemon and untracked cache are primed before your first
+    # command. The first status per repo/boot is a cold full scan; paying it off the
+    # prompt while you read this banner means the first prompt's git module is already fast.
+    if git rev-parse --is-inside-work-tree &>/dev/null; then
+        (git status --porcelain &>/dev/null &) &>/dev/null
+    fi
+
     # Run the security check at most once per 12h across all shells. The result is
     # process-local, so without this every new terminal re-paid ~72ms. Tradeoff: a
     # newly-introduced permission problem may go unwarned for up to 12h in fresh shells;

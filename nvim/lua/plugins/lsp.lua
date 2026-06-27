@@ -1,4 +1,9 @@
--- LSP configuration
+-- LSP configuration (Neovim 0.11+ API: vim.lsp.config / vim.lsp.enable)
+--
+-- We no longer use the deprecated `require('lspconfig')` framework. nvim-lspconfig
+-- still ships the per-server defaults (cmd/filetypes/root) under lsp/<name>.lua on the
+-- runtimepath; vim.lsp.config() merges our overrides with those, and vim.lsp.enable()
+-- turns the servers on. mason installs the server binaries.
 local M = {}
 
 local lazy_available = pcall(require, "lazy")
@@ -9,72 +14,58 @@ end
 M.plugins = {
   {
     "neovim/nvim-lspconfig",
-    ft = { "typescript", "javascript", "go", "lua", "json", "typespec" }, -- Load only for these filetypes
+    ft = { "typescript", "javascript", "go", "lua", "json", "typespec" }, -- load for these filetypes
     dependencies = {
       "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
       "hrsh7th/cmp-nvim-lsp",
     },
     config = function()
-      -- Check if all required modules are available
-      local lspconfig_ok, lspconfig = pcall(require, "lspconfig")
+      -- Mason installs server binaries; we enable servers explicitly below.
       local mason_ok, mason = pcall(require, "mason")
-      local mason_lspconfig_ok, mason_lspconfig = pcall(require, "mason-lspconfig")
-      local cmp_nvim_lsp_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
-      
-      if not lspconfig_ok then
-        vim.notify("Failed to load lspconfig", vim.log.levels.ERROR)
-        return
+      if mason_ok then
+        mason.setup()
       end
-      
-      if not mason_ok then
-        vim.notify("Failed to load mason", vim.log.levels.ERROR)
-        return
-      end
-      
-      if not mason_lspconfig_ok then
-        vim.notify("Failed to load mason-lspconfig", vim.log.levels.ERROR)
-        return
-      end
-      
-      -- Mason setup
-      mason.setup()
-      mason_lspconfig.setup({
-        ensure_installed = {
-          "ts_ls",
-          "biome",
-          "lua_ls",
-          -- Don't auto-install gopls since you have it via gvm
-        },
-        automatic_installation = false,
-      })
 
-      -- Diagnostic configuration
+      local mason_lspconfig_ok, mason_lspconfig = pcall(require, "mason-lspconfig")
+      if mason_lspconfig_ok then
+        mason_lspconfig.setup({
+          ensure_installed = { "ts_ls", "biome", "lua_ls" }, -- gopls comes from gvm
+          automatic_enable = false, -- we call vim.lsp.enable() ourselves
+        })
+      end
+
+      -- Diagnostics. (source = true; the "always"/"if_many" strings are deprecated.)
       vim.diagnostic.config({
-        virtual_text = {
-          prefix = "●",
-          source = "always",
-        },
-        float = {
-          source = "always",
-          border = "rounded",
-        },
+        virtual_text = { prefix = "●", source = true },
+        float = { source = true, border = "rounded" },
         signs = true,
         underline = true,
         update_in_insert = false,
         severity_sort = true,
       })
 
-      -- Get capabilities from cmp if available
+      -- Shared capabilities for every server (nvim-cmp integration), applied via
+      -- the "*" pseudo-config so each server inherits it.
       local capabilities = vim.lsp.protocol.make_client_capabilities()
+      local cmp_nvim_lsp_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
       if cmp_nvim_lsp_ok then
         capabilities = cmp_nvim_lsp.default_capabilities()
       end
+      vim.lsp.config("*", { capabilities = capabilities })
 
-      -- TypeScript/JavaScript
-      lspconfig.ts_ls.setup({
-        capabilities = capabilities,
-        root_dir = lspconfig.util.root_pattern("package.json", "tsconfig.json", "jsconfig.json", ".git"),
+      -- TypeScript / JavaScript
+      local ts_inlay_hints = {
+        includeInlayParameterNameHints = "all",
+        includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+        includeInlayFunctionParameterTypeHints = true,
+        includeInlayVariableTypeHints = true,
+        includeInlayPropertyDeclarationTypeHints = true,
+        includeInlayFunctionLikeReturnTypeHints = true,
+        includeInlayEnumMemberValueHints = true,
+      }
+      vim.lsp.config("ts_ls", {
+        root_markers = { "package.json", "tsconfig.json", "jsconfig.json", ".git" },
         init_options = {
           preferences = {
             includeCompletionsForModuleExports = true,
@@ -83,59 +74,32 @@ M.plugins = {
         },
         settings = {
           typescript = {
-            inlayHints = {
-              includeInlayParameterNameHints = "all",
-              includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = true,
-              includeInlayPropertyDeclarationTypeHints = true,
-              includeInlayFunctionLikeReturnTypeHints = true,
-              includeInlayEnumMemberValueHints = true,
-            },
-            suggest = {
-              autoImports = true,
-            },
-            preferences = {
-              includePackageJsonAutoImports = "auto",
-            },
+            inlayHints = ts_inlay_hints,
+            suggest = { autoImports = true },
+            preferences = { includePackageJsonAutoImports = "auto" },
           },
           javascript = {
-            inlayHints = {
-              includeInlayParameterNameHints = "all",
-              includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = true,
-              includeInlayPropertyDeclarationTypeHints = true,
-              includeInlayFunctionLikeReturnTypeHints = true,
-              includeInlayEnumMemberValueHints = true,
-            },
-            suggest = {
-              autoImports = true,
-            },
-            preferences = {
-              includePackageJsonAutoImports = "auto",
-            },
+            inlayHints = ts_inlay_hints,
+            suggest = { autoImports = true },
+            preferences = { includePackageJsonAutoImports = "auto" },
           },
         },
       })
 
-      -- Biome
-      lspconfig.biome.setup({
-        capabilities = capabilities,
-        root_dir = lspconfig.util.root_pattern("biome.json", "biome.jsonc", ".git"),
+      -- Biome (formatter/linter LSP)
+      vim.lsp.config("biome", {
+        root_markers = { "biome.json", "biome.jsonc", ".git" },
         single_file_support = false,
-        on_attach = function(client, bufnr)
-          -- Enable formatting capability
+        on_attach = function(client, _)
           client.server_capabilities.documentFormattingProvider = true
           client.server_capabilities.documentRangeFormattingProvider = true
         end,
       })
 
-      -- Go
-      lspconfig.gopls.setup({
-        capabilities = capabilities,
-        cmd = { "gopls" }, -- Use system gopls from PATH
-        root_dir = lspconfig.util.root_pattern("go.mod", ".git"),
+      -- Go (gopls from gvm/PATH)
+      vim.lsp.config("gopls", {
+        cmd = { "gopls" },
+        root_markers = { "go.mod", ".git" },
         settings = {
           gopls = {
             gofumpt = true,
@@ -169,21 +133,13 @@ M.plugins = {
             staticcheck = true,
             directoryFilters = { "-.git", "-.vscode", "-.idea", "-.vscode-test", "-node_modules" },
             semanticTokens = true,
-            -- Enhanced import handling
             ["local"] = "",
-            gofumpt = true,
-            ["ui.completion.usePlaceholders"] = true,
-            ["ui.diagnostic.analyses"] = {
-              unusedparams = true,
-              unusedwrite = true,
-            },
           },
         },
       })
 
       -- Lua
-      lspconfig.lua_ls.setup({
-        capabilities = capabilities,
+      vim.lsp.config("lua_ls", {
         settings = {
           Lua = {
             runtime = { version = "LuaJIT" },
@@ -195,14 +151,15 @@ M.plugins = {
       })
 
       -- TypeSpec
-      lspconfig.typespec_ls.setup({
-        capabilities = capabilities,
+      vim.lsp.config("typespec_ls", {
         cmd = { "tsp-server", "--stdio" },
-        root_dir = lspconfig.util.root_pattern("tspconfig.yaml", "package.json", ".git"),
         filetypes = { "typespec" },
+        root_markers = { "tspconfig.yaml", "package.json", ".git" },
       })
 
-      -- LSP keymaps
+      vim.lsp.enable({ "ts_ls", "biome", "gopls", "lua_ls", "typespec_ls" })
+
+      -- LSP keymaps (set per buffer on attach)
       vim.api.nvim_create_autocmd("LspAttach", {
         group = vim.api.nvim_create_augroup("UserLspConfig", {}),
         callback = function(ev)
@@ -218,14 +175,18 @@ M.plugins = {
           vim.keymap.set("n", "<leader>f", function()
             vim.lsp.buf.format({ async = true })
           end, vim.tbl_extend("force", opts, { desc = "Format" }))
-          
-          -- Diagnostic keymaps
+
+          -- Diagnostic keymaps (jump() replaces the deprecated goto_prev/goto_next)
           vim.keymap.set("n", "<leader>d", vim.diagnostic.open_float, vim.tbl_extend("force", opts, { desc = "Open diagnostic float" }))
-          vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, vim.tbl_extend("force", opts, { desc = "Previous diagnostic" }))
-          vim.keymap.set("n", "]d", vim.diagnostic.goto_next, vim.tbl_extend("force", opts, { desc = "Next diagnostic" }))
+          vim.keymap.set("n", "[d", function()
+            vim.diagnostic.jump({ count = -1, float = true })
+          end, vim.tbl_extend("force", opts, { desc = "Previous diagnostic" }))
+          vim.keymap.set("n", "]d", function()
+            vim.diagnostic.jump({ count = 1, float = true })
+          end, vim.tbl_extend("force", opts, { desc = "Next diagnostic" }))
           vim.keymap.set("n", "<leader>dl", vim.diagnostic.setloclist, vim.tbl_extend("force", opts, { desc = "Diagnostic loclist" }))
-          
-          -- Go-specific keymaps
+
+          -- Go-specific: organize imports
           if vim.bo.filetype == "go" then
             vim.keymap.set("n", "<leader>gi", function()
               vim.lsp.buf.code_action({

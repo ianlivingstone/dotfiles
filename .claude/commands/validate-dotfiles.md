@@ -7,7 +7,7 @@ Run comprehensive validation checks on the entire dotfiles system.
 This command performs a complete health check including:
 - Installation status (Stow validation)
 - Version compliance (versions.config requirements)
-- Hook build status (Claude hooks)
+- Claude Code hooks configured (.claude/settings.json)
 - Security audit (permissions, .gitignore coverage)
 - Documentation link validation
 - Shell script linting (shellcheck)
@@ -34,11 +34,9 @@ The command runs automatically when invoked:
 - Identifies missing tools
 - Validates Node.js, Go, Git, Docker, etc.
 
-### 3. Hook Build Status
-- Checks if Claude hooks are built
-- Verifies hooks are up-to-date with source
-- Reports build issues
-- Located in `claude_hooks/bin/`
+### 3. Claude Code Hooks
+- Checks that `PostToolUse` hooks are configured in `.claude/settings.json`
+- Hooks are plain command hooks (no build step / compiled binary)
 
 ### 4. Security Audit
 - Validates sensitive file permissions (600/700)
@@ -72,8 +70,8 @@ The command runs automatically when invoked:
 [2/6] Checking version compliance...
 ✅ All tools meet minimum versions
 
-[3/6] Checking hook build status...
-⚠️  Hooks not built (run ./claude_hooks/build-hooks.sh)
+[3/6] Checking Claude Code hooks...
+✅ PostToolUse hooks configured in .claude/settings.json
 
 [4/6] Running security audit...
 ✅ Machine configs properly ignored
@@ -88,14 +86,13 @@ The command runs automatically when invoked:
 ✅ All shell scripts pass shellcheck
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Passed: 4
-⚠️  Warnings: 2
+✅ Passed: 5
+⚠️  Warnings: 1
 ❌ Failed: 0
 
 Recommendations:
-1. Run: ./claude_hooks/build-hooks.sh
-2. Run: chmod 600 ~/.ssh/id_rsa
-3. Fix broken documentation links
+1. Run: chmod 600 ~/.ssh/id_rsa
+2. Fix broken documentation links
 ```
 
 ## When to Use

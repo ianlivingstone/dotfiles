@@ -19,7 +19,7 @@ This command shows what hooks have run, when they ran, and their output, providi
 
 The hook log captures:
 - **Timestamp** - When the hook executed
-- **Hook type** - Which hook ran (whitespace-cleaner, shellcheck, validate-agent-rules)
+- **Hook type** - Which hook ran (whitespace-cleaner, zsh -n, validate-agent-rules)
 - **File path** - What file was being processed
 - **Output** - What the hook reported
 - **Status** - Success or failure
@@ -40,9 +40,9 @@ Last 50 lines
   File: /Users/ian/dotfiles/CLAUDE.md
   Output: Removed trailing whitespace from 3 lines
 
-[2026-01-04 14:35:22] shellcheck
-  File: /Users/ian/dotfiles/dotfiles.sh
-  Output: ✅ No issues found
+[2026-01-04 14:35:22] zsh -n
+  File: /Users/ian/dotfiles/shell/core.sh
+  ✓ syntax OK
 
 [2026-01-04 14:38:45] validate-agent-rules
   File: /Users/ian/dotfiles/shell/AGENTS.md
@@ -109,13 +109,12 @@ tail -50 ~/.claude/hook-output.log
 
 **Search log:**
 ```bash
-grep "shellcheck" ~/.claude/hook-output.log
+grep "zsh -n" ~/.claude/hook-output.log
 ```
 
 ## Related
 
-- `.claude/settings.json` - Hook configuration
-- `claude_hooks/` - Custom Rust hooks
+- `.claude/settings.json` - Hook configuration (PostToolUse command hooks)
 - `/validate-dotfiles` - Comprehensive validation
 
 ## Notes

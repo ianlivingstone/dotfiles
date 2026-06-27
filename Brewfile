@@ -17,7 +17,8 @@ brew "tmux"
 
 # Editor + treesitter toolchain
 brew "neovim"
-brew "tree-sitter"   # required by nvim-treesitter (main branch) to build parsers
+brew "tree-sitter-cli"   # CLI nvim-treesitter (main branch) shells out to for `tree-sitter build`
+                         # NOTE: the bare `tree-sitter` formula is the library only — no CLI binary
 brew "luarocks"      # Neovim Lua rocks
 
 # Version control
@@ -36,7 +37,7 @@ brew "duckdb"
 brew "shellcheck"    # shell linting (Claude Code hooks + script validation)
 
 # Containers
-cask "docker-desktop"   # formerly the "docker" cask (renamed by Homebrew)
+cask "docker-desktop"   # Docker Desktop — provides the engine, GUI, and the docker CLI
 
 # ------------------------------------------------------------------------------
 # Intentionally NOT managed here (installed/managed by other tooling):

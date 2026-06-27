@@ -112,7 +112,10 @@ Commands that modify state without explicit user consent.
 
 ### PostToolUse Hooks
 
-Hooks run automatically after tool use to maintain code quality.
+Hooks run automatically after tool use to maintain code quality. The matcher matches
+the **tool name** (`Write`, `Edit`, `MultiEdit`) — it can't filter by file path, so do
+that in the command. The file path comes from **JSON on stdin** via `jq` (there is no
+`$FILE_PATH` env var).
 
 **Whitespace cleanup hook:**
 ```json
@@ -121,22 +124,22 @@ Hooks run automatically after tool use to maintain code quality.
   "hooks": [
     {
       "type": "command",
-      "command": "[ -f \"$FILE_PATH\" ] && sed -i '' 's/[[:space:]]*$//' \"$FILE_PATH\" || true",
+      "command": "f=$(jq -r '.tool_input.file_path // empty'); [ -n \"$f\" ] && [ -f \"$f\" ] && sed -i '' 's/[[:space:]]*$//' \"$f\" || true",
       "description": "Remove trailing whitespace"
     }
   ]
 }
 ```
 
-**Shellcheck validation hook:**
+**Shell syntax-check hook** (use `zsh -n`, not shellcheck — shellcheck doesn't support zsh):
 ```json
 {
-  "matcher": "Write|Edit.*\\.sh$",
+  "matcher": "Write|Edit|MultiEdit",
   "hooks": [
     {
       "type": "command",
-      "command": "command -v shellcheck >/dev/null && shellcheck -x \"$FILE_PATH\" 2>&1 | head -20 || true",
-      "description": "Lint shell scripts"
+      "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.sh|*.zsh) zsh -n \"$f\" ;; esac",
+      "description": "Syntax-check shell scripts"
     }
   ]
 }
@@ -260,37 +263,23 @@ Hook security checklist:
 - [ ] Hook has timeout protection
 - [ ] Hook tested with malicious filenames
 
-## Claude Hooks Integration
+## Claude Code Hooks
 
-For Claude Code hook development and architecture:
+Hooks are plain `PostToolUse` command hooks in `.claude/settings.json` — **no build
+step, no compiled binary**. Each reads the tool input (JSON on stdin) and acts on the
+written/edited file:
 
-**Architecture:** See `claude_hooks/AGENTS.md` for development rules
+- **whitespace-cleaner** — strips trailing whitespace with `sed`.
+- **zsh -n** — syntax-checks `*.sh`/`*.zsh` files (shellcheck doesn't support zsh).
+- **validate-agent-rules** — runs `.claude/commands/validate-agent-rules.sh` on `AGENTS.md`.
 
-**Status:** Use `./dotfiles.sh status` to check hook build status
+Each hook extracts the path with `jq -r '.tool_input.file_path'` and filters to the file
+it cares about; output is appended to `~/.claude/hook-output.log` (view via the
+`show-hook-log` command).
 
-**Quick Reference:**
-- Build hooks: `./claude_hooks/build-hooks.sh`
-- Hook config: `.claude/settings.json` (already configured)
-- Hook output: Visible in Claude Code transcript (Ctrl+R)
-
-### Custom Rust Hooks
-
-This repository includes custom Rust hooks for performance:
-
-**whitespace-cleaner:**
-- Removes trailing whitespace from files
-- Written in Rust for speed
-- Built via `./claude_hooks/build-hooks.sh`
-- Configured in `.claude/settings.json`
-
-**Building hooks:**
-```bash
-# Build all hooks
-./claude_hooks/build-hooks.sh
-
-# Check build status
-./dotfiles.sh status
-```
+> **Hooks receive input as JSON on stdin** — parse it with `jq`. Do NOT rely on
+> `$FILE_PATH` / `$CLAUDE_FILE_PATHS` env vars; current Claude Code does not set them
+> (an earlier API did, which is why the previous Rust hook silently no-op'd).
 
 ## Sub-Agent Configuration
 
@@ -329,6 +318,5 @@ See `.claude/agents/README.md` for details.
 
 ## Cross-References
 
-- claude_hooks/AGENTS.md (Hook development)
 - docs/security/patterns.md (Security review)
 - .claude/agents/README.md (Sub-agent documentation)

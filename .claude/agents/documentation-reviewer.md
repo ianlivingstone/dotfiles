@@ -124,7 +124,6 @@ ssh/AGENTS.md                # SSH config
 tmux/AGENTS.md               # Tmux config
 gh/AGENTS.md                 # GitHub CLI
 jj/AGENTS.md                 # Jujutsu VCS
-claude_hooks/AGENTS.md       # Claude hooks
 ```
 
 ### docs/ Directory (18 files)

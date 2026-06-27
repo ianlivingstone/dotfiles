@@ -24,9 +24,6 @@ nvim/.config/nvim/*.backup
 # Rust build artifacts
 **/target/
 
-# Built binaries (hooks get built to claude_hooks/bin/)
-claude_hooks/bin/
-
 # Any accidentally created machine configs in wrong location
 **/machine.config
 **/machines/

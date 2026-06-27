@@ -7,10 +7,22 @@ The `dotfiles.sh` script is the main management interface for the dotfiles syste
 **Available commands:**
 - `install` - Initial installation with interactive configuration
 - `status` - Validate installation and check version compliance
-- `update` - Update Node.js/Go/Python versions and install Homebrew packages
+- `update` - Converge tools to the **pinned** versions (versions.config + Brewfile)
+- `upgrade` - Upgrade everything to the **latest** and rewrite the pins in versions.config
 - `reinstall` - Uninstall and reinstall all packages
 - `uninstall` - Remove all dotfiles symlinks
 - `help` - Show help information
+
+**`update` vs `upgrade`:**
+- **`update`** brings you *to* the pinned versions — Node/Go/Python from `versions.config`,
+  missing Homebrew packages from the `Brewfile`. Reproducible and deterministic; never
+  changes the pins. Use this on a new machine or to sync to the committed state.
+- **`upgrade`** moves *past* the pins to the latest and **rewrites `versions.config`** to
+  record them: `brew update && brew upgrade`, `rustup update`, latest **LTS/stable**
+  Node/Go/Python (via nvm/gvm/uv), `gopls@latest`, the brew-tool version floors, and a
+  headless `:Lazy update` for Neovim plugins (treesitter stays commit-pinned). Best-effort
+  (a failing step doesn't abort the rest). **Review `git diff versions.config nvim/lazy-lock.json`
+  before committing.**
 
 ## Homebrew packages
 
